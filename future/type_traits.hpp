@@ -29,8 +29,8 @@
 
 #pragma once
 
-#include <type_traits>
 #include <functional>
+#include <type_traits>
 
 namespace ps
 {
@@ -51,6 +51,8 @@ namespace ps
         nat() = delete;
         nat(const nat&) = delete;
         nat& operator=(const nat&) = delete;
+        nat(nat&&) noexcept = delete;
+        nat& operator=(nat&&) noexcept = delete;
         ~nat() = delete;
     };
 
@@ -342,4 +344,4 @@ namespace ps
     template<class F, class ...Args>
     using invoke_of_t = typename invoke_of<F, Args...>::type;
 
-}
+} // namespace ps

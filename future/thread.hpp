@@ -29,20 +29,20 @@
 
 #pragma once
 
-#include <condition_variable>
-#include <mutex>
-#include <pthread.h>
 #include "debug.hpp"
 #include "system_error.hpp"
+#include "tuple.hpp"
+#include <chrono>
+#include <condition_variable>
+#include <exception>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <ostream>
-#include <type_traits>
-#include "tuple.hpp"
-#include <tuple>
-#include <exception>
-#include <chrono>
+#include <pthread.h>
 #include <thread>
+#include <tuple>
+#include <type_traits>
 
 namespace ps
 {
@@ -62,27 +62,29 @@ namespace ps
         thread_struct();
         thread_struct(const thread_struct&) = delete;
         thread_struct& operator=(const thread_struct&) = delete;
+        thread_struct(thread_struct&&) noexcept = delete;
+        thread_struct& operator=(thread_struct&&) noexcept = delete;
         ~thread_struct();
 
-        void notify_all_at_thread_exit(std::condition_variable*, std::mutex*);
-        void make_ready_at_thread_exit(assoc_sub_state*);
+        void notify_all_at_thread_exit(std::condition_variable* /*cv*/, std::mutex* /*m*/);
+        void make_ready_at_thread_exit(assoc_sub_state* /*s*/);
     };
 
     template<class T>
     class thread_specific_ptr
     {
-        pthread_key_t _key;
+        pthread_key_t _key{0};
 
         // Only thread_local_data() may construct a thread_specific_ptr and only with T == thread_struct.
-        static_assert((std::is_same<T, thread_struct>::value), "");
+        static_assert((std::is_same<T, thread_struct>::value));
         thread_specific_ptr()
         {
             int ec = pthread_key_create(&_key, &thread_specific_ptr::at_thread_exit);
-            if (ec)
+            if (ec != 0)
+            {
                 throw_system_error(ec, "thread_specific_ptr construction failed");
+            }
         }
-        thread_specific_ptr(const thread_specific_ptr&)  = delete;
-        thread_specific_ptr& operator=(const thread_specific_ptr&) = delete;
 
         friend thread_specific_ptr<thread_struct>& thread_local_data();
 
@@ -94,11 +96,13 @@ namespace ps
     public:
         using pointer = T*;
 
-        ~thread_specific_ptr()
-        {
-            // thread_specific_ptr is only created with a static storage duration so this destructor is only invoked during program termination.
-            // Invoking pthread_key_delete(_key) may prevent other threads from deleting their thread local data. For this reason we leak the key.
-        }
+        // thread_specific_ptr is only created with a static storage duration so this destructor is only invoked during program termination.
+        // Invoking pthread_key_delete(_key) may prevent other threads from deleting their thread local data. For this reason we leak the key.
+        ~thread_specific_ptr() = default;
+        thread_specific_ptr(const thread_specific_ptr&)  = delete;
+        thread_specific_ptr& operator=(const thread_specific_ptr&) = delete;
+        thread_specific_ptr(thread_specific_ptr&&) noexcept = delete;
+        thread_specific_ptr& operator=(thread_specific_ptr&&) noexcept = delete;
 
         pointer get() const
         {
@@ -125,19 +129,17 @@ namespace ps
     namespace this_thread
     {
         inline thread_id get_id() noexcept;
-    }
+    } // namespace this_thread
 
     class thread_id
     {
         // FIXME: pthread_t is a pointer on Darwin but a long on Linux.
         // NULL is the no-thread value on Darwin.  Someone needs to check
         // on other platforms.  We assume 0 works everywhere for now.
-        pthread_t _id;
+        pthread_t _id{nullptr};
 
     public:
-        inline thread_id() noexcept : _id(0)
-        {
-        }
+        inline thread_id() noexcept = default;
 
         friend inline bool operator==(thread_id x, thread_id y) noexcept
         {
@@ -186,16 +188,14 @@ namespace ps
         {
             return pthread_self();
         }
-    }
+    } // namespace this_thread
 
     class thread
     {
-        pthread_t _t;
+        pthread_t _t {nullptr};
 
-        thread(const thread&);
-        thread& operator=(const thread&);
     public:
-        using id = thread_id ;
+        using id = thread_id;
         using native_handle_type = pthread_t;
 
         inline thread() noexcept : _t(nullptr)
@@ -206,6 +206,8 @@ namespace ps
         explicit thread(F&& f, Args&&... args);
         ~thread();
 
+        thread(const thread&) = delete;
+        thread& operator=(const thread&) = delete;
         inline thread(thread&& t) noexcept : _t(t._t)
         {
             t._t = nullptr;
@@ -236,7 +238,7 @@ namespace ps
     };
 
     template <class TS, class F, class ...Args, std::size_t ...Indices>
-    inline void thread_execute(std::tuple<TS, F, Args...>& t, tuple_indices<Indices...>)
+    inline void thread_execute(std::tuple<TS, F, Args...>& t, tuple_indices<Indices...> /*unused*/)
     {
         invoke(std::move(std::get<1>(t)), std::move(std::get<Indices>(t))...);
     }
@@ -261,15 +263,21 @@ namespace ps
         std::unique_ptr<G> p(new G(std::move(tsp), decay_copy(std::forward<F>(f)), decay_copy(std::forward<Args>(args))...));
         int ec = pthread_create(&_t, NULL, &thread_proxy<G>, p.get());
         if (ec == 0)
+        {
             p.release();
+        }
         else
+        {
             throw_system_error(ec, "thread constructor failed");
+        }
     }
 
     inline thread& thread::operator=(thread&& t) noexcept
     {
         if (_t != nullptr)
+        {
             std::terminate();
+        }
         _t = t._t;
         t._t = nullptr;
         return *this;
@@ -287,19 +295,22 @@ namespace ps
         template<class Rep, class Period>
         void sleep_for(const std::chrono::duration<Rep, Period>& d)
         {
-            using namespace std::chrono;
-            if (d > duration<Rep, Period>::zero())
+            if (d > std::chrono::duration<Rep, Period>::zero())
             {
-                constexpr duration<long double> Max = nanoseconds::max();
-                nanoseconds ns;
+                constexpr std::chrono::duration<long double> Max = std::chrono::nanoseconds::max();
+                std::chrono::nanoseconds ns{};
                 if (d < Max)
                 {
-                    ns = duration_cast<nanoseconds>(d);
+                    ns = std::chrono::duration_cast<std::chrono::nanoseconds>(d);
                     if (ns < d)
+                    {
                         ++ns;
+                    }
                 }
                 else
-                    ns = nanoseconds::max();
+                {
+                    ns = std::chrono::nanoseconds::max();
+                }
                 sleep_for(ns);
             }
         }
@@ -307,28 +318,28 @@ namespace ps
         template<class Clock, class Duration>
         void sleep_until(const std::chrono::time_point<Clock, Duration>& t)
         {
-            using namespace std::chrono;
             std::mutex mut;
             std::condition_variable cv;
             std::unique_lock<std::mutex> lk(mut);
             while (Clock::now() < t)
+            {
                 cv.wait_until(lk, t);
+            }
         }
 
         template<class Duration>
         inline void sleep_until(const std::chrono::time_point<std::chrono::steady_clock, Duration>& t)
         {
-            using namespace std::chrono;
-            sleep_for(t - steady_clock::now());
+            sleep_for(t - std::chrono::steady_clock::now());
         }
 
         inline void yield() noexcept
         {
             sched_yield();
         }
-    }
+    } // namespace this_thread
 
-}
+} // namespace ps
 
 namespace std
 {
@@ -343,4 +354,4 @@ namespace std
             return std::hash<pthread_t>()(v._id);
         }
     };
-}
+} // namespace std

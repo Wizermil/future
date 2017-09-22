@@ -29,13 +29,13 @@
 
 #pragma once
 
+#include "tuple.hpp"
+#include "type_traits.hpp"
+#include <cstddef>
 #include <memory>
+#include <tuple>
 #include <type_traits>
 #include <utility>
-#include "tuple.hpp"
-#include <tuple>
-#include <cstddef>
-#include "type_traits.hpp"
 
 namespace ps
 {
@@ -45,18 +45,20 @@ namespace ps
     class shared_count
     {
     protected:
-        long _shared_owners;
+        std::int64_t _shared_owners;
         virtual ~shared_count();
 
     private:
         virtual void on_zero_shared() noexcept = 0;
 
     public:
-        inline explicit shared_count(long refs = 0) noexcept : _shared_owners(refs)
+        inline explicit shared_count(std::int64_t refs = 0) noexcept : _shared_owners(refs)
         {
         }
         shared_count(const shared_count&) = delete;
         shared_count& operator=(const shared_count&) = delete;
+        shared_count(shared_count&&) noexcept = delete;
+        shared_count& operator=(shared_count&&) noexcept = delete;
 
         inline void add_shared() noexcept
         {
@@ -73,7 +75,7 @@ namespace ps
             return false;
         }
 
-        inline long use_count() const noexcept
+        inline std::int64_t use_count() const noexcept
         {
             return __atomic_load_n(&_shared_owners, __ATOMIC_RELAXED) + 1;
         }
@@ -175,7 +177,7 @@ namespace ps
         }
 
         template<class... Args, std::size_t... Indexes>
-        inline constexpr compressed_pair_elem(std::piecewise_construct_t, std::tuple<Args...> args, tuple_indices<Indexes...>) : _value(std::forward<Args>(std::get<Indexes>(args))...)
+        inline constexpr compressed_pair_elem(std::piecewise_construct_t /*unused*/, std::tuple<Args...> args, tuple_indices<Indexes...> /*unused*/) : _value(std::forward<Args>(std::get<Indexes>(args))...)
         {
         }
 
@@ -208,7 +210,7 @@ namespace ps
         }
 
         template<class... Args, std::size_t... Indexes>
-        inline constexpr compressed_pair_elem(std::piecewise_construct_t, std::tuple<Args...> args, tuple_indices<Indexes...>) : value_type(std::forward<Args>(std::get<Indexes>(args))...)
+        inline constexpr compressed_pair_elem(std::piecewise_construct_t /*unused*/, std::tuple<Args...> args, tuple_indices<Indexes...> /*unused*/) : value_type(std::forward<Args>(std::get<Indexes>(args))...)
         {
         }
 
@@ -244,7 +246,7 @@ namespace ps
         }
 
         template<class T>
-        inline constexpr compressed_pair(second_tag, T&& t) : Base1(), Base2(std::forward<T>(t))
+        inline constexpr compressed_pair(second_tag /*unused*/, T&& t) : Base1(), Base2(std::forward<T>(t))
         {
         }
 
@@ -291,4 +293,4 @@ namespace ps
         x.swap(y);
     }
 
-}
+} // namespace ps

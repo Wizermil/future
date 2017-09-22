@@ -29,9 +29,9 @@
 
 #include "debug.hpp"
 
-#include <string>
 #include <cstdio>
 #include <cstdlib>
+#include <string>
 
 namespace ps
 {
@@ -50,9 +50,8 @@ namespace ps
 
     [[noreturn]] void libcpp_abort_debug_function(const libcpp_debug_info& info)
     {
-        std::fprintf(stderr, "%s\n", make_what_str(info).c_str());
+        std::fputs((make_what_str(info)+'\n').c_str(), stderr);
         std::abort();
     }
 
-}
-
+} // namespace ps

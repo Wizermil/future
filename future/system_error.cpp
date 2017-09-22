@@ -29,12 +29,12 @@
 
 #include "system_error.hpp"
 
-#include <cstdlib>
-#include <cerrno>
-#include <cstdio>
-#include <cstddef>
-#include <cstring>
 #include "debug.hpp"
+#include <cerrno>
+#include <cstddef>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 namespace ps
 {
@@ -43,19 +43,23 @@ namespace ps
         constexpr std::size_t strerror_buff_size = 1024;
 
         std::string do_strerror_r(int ev);
-        __attribute__((unused)) const char* handle_strerror_r_return(char* strerror_return, char* buffer)
+        __attribute__((unused)) const char* handle_strerror_r_return(const char* strerror_return, char* /*buffer*/)
         {
             return strerror_return;
         }
 
-        const char* handle_strerror_r_return(int strerror_return, char* buffer)
+        const char* handle_strerror_r_return(int strerror_return, const char* buffer)
         {
             if (strerror_return == 0)
+            {
                 return buffer;
+            }
 
             int new_errno = strerror_return == -1 ? errno : strerror_return;
             if (new_errno == EINVAL)
+            {
                 return "";
+            }
 
             ASSERT(new_errno == ERANGE, "unexpected error from ::strerror_r");
             std::abort();
@@ -67,7 +71,7 @@ namespace ps
             const int old_errno = errno;
             const char* error_message = handle_strerror_r_return(::strerror_r(ev, buffer, strerror_buff_size), buffer);
 
-            if (!error_message[0])
+            if (*error_message == '\0')
             {
                 std::snprintf(buffer, strerror_buff_size, "Unknown error %d", ev);
                 error_message = buffer;
@@ -75,7 +79,7 @@ namespace ps
             errno = old_errno;
             return std::string(error_message);
         }
-    }
+    } // namespace
 
     void throw_system_error(int ev, const char* what_arg)
     {
@@ -87,4 +91,4 @@ namespace ps
         return do_strerror_r(ev);
     }
 
-}
+} // namespace ps

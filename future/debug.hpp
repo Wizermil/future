@@ -42,23 +42,21 @@ namespace ps
 
     struct libcpp_debug_info
     {
-        inline constexpr libcpp_debug_info() : file(nullptr), line(-1), pred(nullptr), msg(nullptr)
-        {
-        }
+        inline constexpr libcpp_debug_info() = default;
         inline constexpr libcpp_debug_info(const char* f, int l, const char* p, const char* m) : file(f), line(l), pred(p), msg(m)
         {
         }
 
-        const char* file;
-        int line;
-        const char* pred;
-        const char* msg;
+        const char* file {nullptr};
+        int line {-1};
+        const char* pred {nullptr};
+        const char* msg {nullptr};
     };
 
-    using libcpp_debug_function_type = std::add_pointer<void(const libcpp_debug_info&)>::type;
+    using libcpp_debug_function_type = std::add_pointer<void(const libcpp_debug_info& /*info*/)>::type;
 
-    [[noreturn]] void libcpp_abort_debug_function(const libcpp_debug_info&);
+    [[noreturn]] void libcpp_abort_debug_function(const libcpp_debug_info& /*info*/);
 
     extern libcpp_debug_function_type libcpp_debug_function;
 
-}
+} // namespace ps

@@ -29,24 +29,24 @@
 
 #pragma once
 
-#include <cstdint>
-#include <system_error>
-#include <type_traits>
-#include <chrono>
-#include <utility>
-#include <stdexcept>
-#include <condition_variable>
-#include <mutex>
-#include <exception>
-#include <memory>
-#include <functional>
-#include <thread>
-#include <tuple>
 #include "memory.hpp"
 #include "thread.hpp"
-#include <vector>
-#include <iterator>
 #include <atomic>
+#include <chrono>
+#include <condition_variable>
+#include <cstdint>
+#include <exception>
+#include <functional>
+#include <iterator>
+#include <memory>
+#include <mutex>
+#include <stdexcept>
+#include <system_error>
+#include <thread>
+#include <tuple>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
 namespace ps
 {
@@ -126,9 +126,10 @@ namespace ps
         future_error(std::error_code ec);
         explicit future_error(future_errc ev);
         future_error(const future_error&) =default;
-        future_error& operator=(const future_error&) =default;
-        virtual ~future_error() noexcept;
-
+        future_error& operator=(const future_error&) = default;
+        future_error(future_error&&) noexcept = default;
+        future_error& operator=(future_error&&) noexcept = default;
+        ~future_error() noexcept override;
 
         inline const std::error_code& code() const noexcept
         {
@@ -149,14 +150,12 @@ namespace ps
     class packaged_task_base<T(ArgTypes...)>
     {
     public:
-        inline packaged_task_base()
-        {
-        }
+        inline packaged_task_base() = default;
         packaged_task_base(const packaged_task_base&) = delete;
         packaged_task_base& operator=(const packaged_task_base&) = delete;
-        inline virtual ~packaged_task_base()
-        {
-        }
+        packaged_task_base(packaged_task_base&&) noexcept = delete;
+        packaged_task_base& operator=(packaged_task_base&&) noexcept = delete;
+        inline virtual ~packaged_task_base() = default;
         virtual void move_to(packaged_task_base*) noexcept = 0;
         virtual void destroy() = 0;
         virtual void destroy_deallocate() = 0;
@@ -183,7 +182,7 @@ namespace ps
         inline packaged_task_func(F&& f, const Alloc& a) : _f(std::move(f), a)
         {
         }
-        virtual void move_to(packaged_task_base<R(ArgTypes...)>*) noexcept;
+        virtual void move_to(packaged_task_base<R(ArgTypes...)>* /*p*/) noexcept;
         virtual void destroy();
         virtual void destroy_deallocate();
         virtual R operator()(ArgTypes&& ... args);
@@ -213,9 +212,9 @@ namespace ps
     }
 
     template<class F, class Alloc, class R, class ...ArgTypes>
-    R packaged_task_func<F, Alloc, R(ArgTypes...)>::operator()(ArgTypes&& ... arg)
+    R packaged_task_func<F, Alloc, R(ArgTypes...)>::operator()(ArgTypes&& ... args)
     {
-        return ps::invoke(_f.first(), std::forward<ArgTypes>(arg)...);
+        return ps::invoke(_f.first(), std::forward<ArgTypes>(args)...);
     }
 
     template<class Callable>
@@ -237,36 +236,38 @@ namespace ps
         template<class F>
         packaged_task_function(F&& f);
         template<class F, class Alloc>
-        packaged_task_function(std::allocator_arg_t, const Alloc& a, F&& f);
+        packaged_task_function(std::allocator_arg_t /*unused*/, const Alloc& a0, F&& f);
 
-        packaged_task_function(packaged_task_function&&) noexcept;
-        packaged_task_function& operator=(packaged_task_function&&) noexcept;
+        packaged_task_function(packaged_task_function&& f) noexcept;
+        packaged_task_function& operator=(packaged_task_function&& f) noexcept;
 
         packaged_task_function(const packaged_task_function&) =  delete;
         packaged_task_function& operator=(const packaged_task_function&) =  delete;
 
         ~packaged_task_function();
 
-        void swap(packaged_task_function&) noexcept;
+        void swap(packaged_task_function& f) noexcept;
 
-        inline R operator()(ArgTypes...) const;
+        inline R operator()(ArgTypes... args) const;
     };
 
     template<class R, class ...ArgTypes>
     packaged_task_function<R(ArgTypes...)>::packaged_task_function(packaged_task_function&& f) noexcept
     {
         if (f._f == nullptr)
+        {
             _f = nullptr;
-            else if (f._f == static_cast<base*>(&f._buf))
-            {
-                _f = static_cast<base*>(&_buf);
-                f._f->move_to(_f);
-            }
-            else
-            {
-                _f = f._f;
-                f._f = nullptr;
-            }
+        }
+        else if (f._f == static_cast<base*>(&f._buf))
+        {
+            _f = static_cast<base*>(&_buf);
+            f._f->move_to(_f);
+        }
+        else
+        {
+            _f = f._f;
+            f._f = nullptr;
+        }
     }
 
     template<class R, class ...ArgTypes>
@@ -293,7 +294,7 @@ namespace ps
 
     template<class R, class ...ArgTypes>
     template<class F, class Alloc>
-    packaged_task_function<R(ArgTypes...)>::packaged_task_function(std:: allocator_arg_t, const Alloc& a0, F&& f) : _f(nullptr)
+    packaged_task_function<R(ArgTypes...)>::packaged_task_function(std:: allocator_arg_t /*unused*/, const Alloc& a0, F&& f) : _f(nullptr)
     {
         using FR = typename std::remove_reference<typename std::decay<F>::type>::type;
         using FF = packaged_task_func<FR, Alloc, R(ArgTypes...)>;
@@ -317,23 +318,29 @@ namespace ps
     packaged_task_function<R(ArgTypes...)>& packaged_task_function<R(ArgTypes...)>::operator=(packaged_task_function&& f) noexcept
     {
         if (_f == reinterpret_cast<base*>(&_buf))
+        {
             _f->destroy();
-            else if (_f)
-                _f->destroy_deallocate();
+        }
+        else if (_f)
+        {
+            _f->destroy_deallocate();
+        }
 
-                _f = nullptr;
-                if (f._f == nullptr)
-                    _f = nullptr;
-                    else if (f._f == reinterpret_cast<base*>(&f._buf))
-                    {
-                        _f = reinterpret_cast<base*>(&_buf);
-                        f._f->move_to(_f);
-                    }
-                    else
-                    {
-                        _f = f._f;
-                        f._f = nullptr;
-                    }
+        _f = nullptr;
+        if (f._f == nullptr)
+        {
+            _f = nullptr;
+        }
+        else if (f._f == reinterpret_cast<base*>(&f._buf))
+        {
+            _f = reinterpret_cast<base*>(&_buf);
+            f._f->move_to(_f);
+        }
+        else
+        {
+            _f = f._f;
+            f._f = nullptr;
+        }
         return *this;
     }
 
@@ -341,9 +348,13 @@ namespace ps
     packaged_task_function<R(ArgTypes...)>::~packaged_task_function()
     {
         if (_f == reinterpret_cast<base*>(&_buf))
+        {
             _f->destroy();
+        }
         else if (_f)
+        {
             _f->destroy_deallocate();
+        }
     }
 
     template<class R, class ...ArgTypes>
@@ -352,7 +363,7 @@ namespace ps
         if (_f == static_cast<base*>(&_buf) && f._f == static_cast<base*>(&f._buf))
         {
             typename std::aligned_storage<sizeof(_buf)>::type tempbuf;
-            base* t = static_cast<base*>(&tempbuf);
+            auto t = static_cast<base*>(&tempbuf);
             _f->move_to(t);
             _f->destroy();
             _f = nullptr;
@@ -379,13 +390,15 @@ namespace ps
             _f = static_cast<base*>(&_buf);
         }
         else
+        {
             std::swap(_f, f._f);
+        }
     }
 
     template<class R, class ...ArgTypes>
-    inline R packaged_task_function<R(ArgTypes...)>::operator()(ArgTypes... arg) const
+    inline R packaged_task_function<R(ArgTypes...)>::operator()(ArgTypes... args) const
     {
-        return (*_f)(std::forward<ArgTypes>(arg)...);
+        return (*_f)(std::forward<ArgTypes>(args)...);
     }
 
     // assoc_sub_state
@@ -436,9 +449,9 @@ namespace ps
         mutable std::mutex _mut;
         mutable std::condition_variable _cv;
         std::atomic<unsigned> _status;
-        packaged_task_function<void(std::exception_ptr)> _continuation;
+        packaged_task_function<void(const std::exception_ptr&)> _continuation;
 
-        virtual void on_zero_shared() noexcept;
+        void on_zero_shared() noexcept override;
         void sub_wait(std::unique_lock<std::mutex>& lk);
     public:
         enum
@@ -456,7 +469,7 @@ namespace ps
 
         inline bool has_value() const
         {
-            return (_status & constructed) || (_exception != nullptr);
+            return ((_status & constructed) == constructed) || (_exception != nullptr);
         }
 
         inline void set_future_attached()
@@ -484,10 +497,10 @@ namespace ps
         void set_value();
         void set_value_at_thread_exit();
 
-        void set_exception(std::exception_ptr p);
-        void set_exception_at_thread_exit(std::exception_ptr p);
+        void set_exception(const std::exception_ptr& p);
+        void set_exception_at_thread_exit(const std::exception_ptr& p);
 
-        void then(packaged_task_function<void(std::exception_ptr)>&& continuation);
+        void then(packaged_task_function<void(const std::exception_ptr&)>&& continuation);
         template<class T, class F, class Arg = future<T>>
         future_then_t<T, F, Arg> then(Arg& future, F&& func);
         inline bool has_continuation() const
@@ -517,11 +530,17 @@ namespace ps
     {
         std::unique_lock<std::mutex> lk(_mut);
         if (_status & deferred)
+        {
             return future_status::deferred;
+        }
         while (!(_status & ready) && Clock::now() < abs_time)
+        {
             _cv.wait_until(lk, abs_time);
+        }
         if (_status & ready)
+        {
             return future_status::ready;
+        }
         return future_status::timeout;
     }
 
@@ -531,9 +550,11 @@ namespace ps
         using R = typename future_held<future_then_ret_t<T, F, Arg>>::type;
         promise<R> prom;
         auto ret = prom.get_future();
-        then([&future, p = std::move(prom), f = decay_copy(func)](std::exception_ptr exception) mutable {
+        then([&future, p = std::move(prom), f = decay_copy(func)](const std::exception_ptr& exception) mutable {
             if (exception != nullptr)
+            {
                 p.set_exception(exception);
+            }
             else
             {
                 try
@@ -576,7 +597,7 @@ namespace ps
     protected:
         U _value;
 
-        virtual void on_zero_shared() noexcept;
+        void on_zero_shared() noexcept override;
     public:
 
         template<class Arg>
@@ -592,8 +613,10 @@ namespace ps
     void assoc_state<T>::on_zero_shared() noexcept
     {
         if (_status & base::constructed)
+        {
             reinterpret_cast<T*>(&_value)->~T();
-            delete this;
+        }
+        delete this;
     }
 
     template<class T>
@@ -604,15 +627,21 @@ namespace ps
         {
             std::unique_lock<std::mutex> lk(_mut);
             if (has_value())
+            {
                 throw_future_error(future_errc::promise_already_satisfied);
+            }
             new (&_value) T(std::forward<Arg>(arg));
             _status |= base::constructed | base::ready;
             _cv.notify_all();
             if (has_continuation())
+            {
                 continuation = true;
+            }
         }
         if (continuation)
+        {
             _continuation(_exception);
+        }
     }
 
     template<class T>
@@ -621,7 +650,9 @@ namespace ps
     {
         std::unique_lock<std::mutex> lk(_mut);
         if (has_value())
+        {
             throw_future_error(future_errc::promise_already_satisfied);
+        }
         new (&_value) T(std::forward<Arg>(arg));
         _status |= base::constructed;
         ASSERT(thread_local_data().get() != nullptr, "");
@@ -634,7 +665,9 @@ namespace ps
         std::unique_lock<std::mutex> lk(_mut);
         sub_wait(lk);
         if (_exception != nullptr)
+        {
             std::rethrow_exception(_exception);
+        }
         return std::move(*reinterpret_cast<T*>(&_value));
     }
 
@@ -644,7 +677,9 @@ namespace ps
         std::unique_lock<std::mutex> lk(_mut);
         sub_wait(lk);
         if (_exception != nullptr)
+        {
             std::rethrow_exception(_exception);
+        }
         return *reinterpret_cast<T*>(&_value);
     }
 
@@ -658,7 +693,7 @@ namespace ps
     protected:
         U _value;
 
-        virtual void on_zero_shared() noexcept;
+        void on_zero_shared() noexcept override;
     public:
 
         void set_value(T& arg);
@@ -680,15 +715,21 @@ namespace ps
         {
             std::unique_lock<std::mutex> lk(this->_mut);
             if (this->has_value())
+            {
                 throw_future_error(future_errc::promise_already_satisfied);
+            }
             _value = std::addressof(arg);
             _status |= base::constructed | base::ready;
             _cv.notify_all();
             if (has_continuation())
+            {
                 continuation = true;
+            }
         }
         if (continuation)
-            _continuation(_exception);
+        {
+            ps::invoke(std::move(_continuation), _exception);
+        }
     }
 
     template<class T>
@@ -696,7 +737,9 @@ namespace ps
     {
         std::unique_lock<std::mutex> lk(this->_mut);
         if (this->has_value())
+        {
             throw_future_error(future_errc::promise_already_satisfied);
+        }
         _value = std::addressof(arg);
         _status |= base::constructed;
         ASSERT(thread_local_data().get() != nullptr, "");
@@ -709,7 +752,9 @@ namespace ps
         std::unique_lock<std::mutex> lk(this->_mut);
         this->sub_wait(lk);
         if (this->_exception != nullptr)
+        {
             rethrow_exception(this->_exception);
+        }
         return *_value;
     }
 
@@ -732,15 +777,17 @@ namespace ps
     void assoc_state_alloc<T, Alloc>::on_zero_shared() noexcept
     {
         if (this->_state & base::constructed)
+        {
             reinterpret_cast<T*>(std::addressof(this->_value))->~T();
+        }
 
-            using Al = typename allocator_traits_rebind<Alloc, assoc_state_alloc>::type;
-            using ATraits = std::allocator_traits<Al> ;
-            using PTraits = std::pointer_traits<typename ATraits::pointer>;
-            Al a(_alloc);
-            ~assoc_state_alloc();
-            a.deallocate(PTraits::pointer_to(*this), 1);
-            }
+        using Al = typename allocator_traits_rebind<Alloc, assoc_state_alloc>::type;
+        using ATraits = std::allocator_traits<Al> ;
+        using PTraits = std::pointer_traits<typename ATraits::pointer>;
+        Al a(_alloc);
+        ~assoc_state_alloc();
+        a.deallocate(PTraits::pointer_to(*this), 1);
+    }
 
     template<class T, class Alloc>
     class assoc_state_alloc<T&, Alloc> : public assoc_state<T&>
@@ -774,7 +821,7 @@ namespace ps
         using base = assoc_sub_state;
         Alloc _alloc;
 
-        virtual void on_zero_shared() noexcept;
+        void on_zero_shared() noexcept override;
     public:
         inline explicit assoc_sub_state_alloc(const Alloc& a) : _alloc(a)
         {
@@ -836,7 +883,7 @@ namespace ps
             set_deferred();
         }
 
-        virtual void execute();
+        void execute() override;
     };
 
     template<class F>
@@ -898,13 +945,13 @@ namespace ps
 
         F _func;
 
-        virtual void on_zero_shared() noexcept;
+        void on_zero_shared() noexcept override;
     public:
         inline explicit async_assoc_state(F&& f) : _func(std::forward<F>(f))
         {
         }
 
-        virtual void execute();
+        void execute() override;
     };
 
     template<class F>
@@ -967,7 +1014,7 @@ namespace ps
         template<class R>
         friend std::conditional_t<is_reference_wrapper<std::decay_t<R>>::value, future<std::decay_t<R>&>, future<std::decay_t<R>>> make_ready_future(R&& value);
 
-        void then(packaged_task_function<void(std::exception_ptr)>&& continuation);
+        void then(packaged_task_function<void(const std::exception_ptr&)>&& continuation);
 
     public:
         inline future() noexcept : _state(nullptr)
@@ -1001,7 +1048,9 @@ namespace ps
         inline bool is_ready() const
         {
             if (_state)
+            {
                 return _state->is_ready();
+            }
             return false;
         }
 
@@ -1029,7 +1078,9 @@ namespace ps
     future<T>::future(assoc_state<T>* state) : _state(state)
     {
         if (_state->has_future_attached())
+        {
             throw_future_error(future_errc::future_already_retrieved);
+        }
         _state->add_shared();
         _state->set_future_attached();
     }
@@ -1038,7 +1089,9 @@ namespace ps
     future<T>::~future()
     {
         if (_state)
+        {
             _state->release_shared();
+        }
     }
 
     template<class T>
@@ -1058,7 +1111,7 @@ namespace ps
     }
 
     template<class T>
-    void future<T>::then(packaged_task_function<void(std::exception_ptr)>&& continuation)
+    void future<T>::then(packaged_task_function<void(const std::exception_ptr&)>&& continuation)
     {
         return _state->then(std::move(continuation));
     }
@@ -1068,9 +1121,9 @@ namespace ps
     template<class T>
     class future<T&>
     {
-        assoc_state<T&>* _state;
+        assoc_state<T&>* _state{nullptr};
 
-        explicit future(assoc_state<T&>* _state);
+        explicit future(assoc_state<T&>* state);
 
         template<class>
         friend class promise;
@@ -1092,7 +1145,7 @@ namespace ps
         template<class R>
         friend std::conditional_t<is_reference_wrapper<std::decay_t<R>>::value, future<std::decay_t<R>&>, future<std::decay_t<R>>> make_ready_future(R&& value);
 
-        void then(packaged_task_function<void(std::exception_ptr)>&& continuation);
+        void then(packaged_task_function<void(const std::exception_ptr&)>&& continuation);
 
     public:
         inline future() noexcept : _state(nullptr)
@@ -1125,7 +1178,9 @@ namespace ps
         inline bool is_ready() const
         {
             if (_state)
+            {
                 return _state->is_ready();
+            }
             return false;
         }
 
@@ -1154,7 +1209,9 @@ namespace ps
     future<T&>::future(assoc_state<T&>* state) : _state(state)
     {
         if (_state->has_future_attached())
+        {
             throw_future_error(future_errc::future_already_retrieved);
+        }
         _state->add_shared();
         _state->set_future_attached();
     }
@@ -1163,7 +1220,9 @@ namespace ps
     future<T&>::~future()
     {
         if (_state)
+        {
             _state->release_shared();
+        }
     }
 
     template<class T>
@@ -1183,7 +1242,7 @@ namespace ps
     }
 
     template<class T>
-    void future<T&>::then(packaged_task_function<void(std::exception_ptr)>&& continuation)
+    void future<T&>::then(packaged_task_function<void(const std::exception_ptr&)>&& continuation)
     {
         return _state->then(std::move(continuation));
     }
@@ -1193,7 +1252,7 @@ namespace ps
     template<>
     class future<void>
     {
-        assoc_sub_state* _state;
+        assoc_sub_state* _state{nullptr};
 
         explicit future(assoc_sub_state* state);
 
@@ -1216,7 +1275,7 @@ namespace ps
         friend void __attribute__((__visibility__("hidden"))) when_any_inner_helper(Context context);
         friend future<void> make_ready_future();
 
-        void then(packaged_task_function<void(std::exception_ptr)>&& continuation);
+        void then(packaged_task_function<void(const std::exception_ptr&)>&& continuation);
 
     public:
         inline future() noexcept : _state(nullptr)
@@ -1249,8 +1308,10 @@ namespace ps
         }
         inline bool is_ready() const
         {
-            if (_state)
+            if (_state != nullptr)
+            {
                 return _state->is_ready();
+            }
             return false;
         }
 
@@ -1306,7 +1367,7 @@ namespace ps
     public:
         promise();
         template<class Alloc>
-        promise(std::allocator_arg_t, const Alloc& a);
+        promise(std::allocator_arg_t /*unused*/, const Alloc& a0);
         inline promise(promise&& rhs) noexcept : _state(rhs._state)
         {
             rhs._state = nullptr;
@@ -1329,11 +1390,11 @@ namespace ps
 
         void set_value(const T& r);
         void set_value(T&& r);
-        void set_exception(std::exception_ptr p);
+        void set_exception(const std::exception_ptr& p);
 
         void set_value_at_thread_exit(const T& r);
         void set_value_at_thread_exit(T&& r);
-        void set_exception_at_thread_exit(std::exception_ptr p);
+        void set_exception_at_thread_exit(const std::exception_ptr& p);
     };
 
     template<class T>
@@ -1343,7 +1404,7 @@ namespace ps
 
     template<class T>
     template<class Alloc>
-    promise<T>::promise(std::allocator_arg_t, const Alloc& a0)
+    promise<T>::promise(std::allocator_arg_t /*unused*/, const Alloc& a0)
     {
         using State = assoc_state_alloc<T, Alloc>;
         using A2 = typename allocator_traits_rebind<Alloc, State>::type;
@@ -1360,7 +1421,9 @@ namespace ps
         if (_state)
         {
             if (!_state->has_value() && _state->use_count() > 1)
+            {
                 _state->set_exception(std::make_exception_ptr(future_error(make_error_code(future_errc::broken_promise))));
+            }
             _state->release_shared();
         }
     }
@@ -1369,7 +1432,9 @@ namespace ps
     future<T> promise<T>::get_future()
     {
         if (_state == nullptr)
+        {
             throw_future_error(future_errc::no_state);
+        }
         return future<T>(_state);
     }
 
@@ -1377,7 +1442,9 @@ namespace ps
     void promise<T>::set_value(const T& r)
     {
         if (_state == nullptr)
+        {
             throw_future_error(future_errc::no_state);
+        }
         _state->set_value(r);
     }
 
@@ -1385,16 +1452,20 @@ namespace ps
     void promise<T>::set_value(T&& r)
     {
         if (_state == nullptr)
+        {
             throw_future_error(future_errc::no_state);
+        }
         _state->set_value(std::move(r));
     }
 
     template<class T>
-    void promise<T>::set_exception(std::exception_ptr p)
+    void promise<T>::set_exception(const std::exception_ptr& p)
     {
         ASSERT(p != nullptr, "promise::set_exception: received nullptr");
         if (_state == nullptr)
+        {
             throw_future_error(future_errc::no_state);
+        }
         _state->set_exception(p);
     }
 
@@ -1402,7 +1473,9 @@ namespace ps
     void promise<T>::set_value_at_thread_exit(const T& r)
     {
         if (_state == nullptr)
+        {
             throw_future_error(future_errc::no_state);
+        }
         _state->set_value_at_thread_exit(r);
     }
 
@@ -1410,16 +1483,20 @@ namespace ps
     void promise<T>::set_value_at_thread_exit(T&& r)
     {
         if (_state == nullptr)
+        {
             throw_future_error(future_errc::no_state);
+        }
         _state->set_value_at_thread_exit(std::move(r));
     }
 
     template<class T>
-    void promise<T>::set_exception_at_thread_exit(std::exception_ptr p)
+    void promise<T>::set_exception_at_thread_exit(const std::exception_ptr& p)
     {
         ASSERT(p != nullptr, "promise::set_exception_at_thread_exit: received nullptr");
         if (_state == nullptr)
+        {
             throw_future_error(future_errc::no_state);
+        }
         _state->set_exception_at_thread_exit(p);
     }
 
@@ -1440,7 +1517,7 @@ namespace ps
     public:
         promise();
         template<class Allocator>
-        promise(std::allocator_arg_t, const Allocator& a);
+        promise(std::allocator_arg_t /*unused*/, const Allocator& a0);
         inline promise(promise&& rhs) noexcept : _state(rhs._state)
         {
             rhs._state = nullptr;
@@ -1462,10 +1539,10 @@ namespace ps
         future<T&> get_future();
 
         void set_value(T& r);
-        void set_exception(std::exception_ptr p);
+        void set_exception(const std::exception_ptr& p);
 
-        void set_value_at_thread_exit(T&);
-        void set_exception_at_thread_exit(std::exception_ptr p);
+        void set_value_at_thread_exit(T& r);
+        void set_exception_at_thread_exit(const std::exception_ptr& p);
     };
 
     template<class T>
@@ -1475,7 +1552,7 @@ namespace ps
 
     template<class T>
     template<class Alloc>
-    promise<T&>::promise(std::allocator_arg_t, const Alloc& a0)
+    promise<T&>::promise(std::allocator_arg_t /*unused*/, const Alloc& a0)
     {
         using State = assoc_state_alloc<T&, Alloc>;
         using A2 = typename allocator_traits_rebind<Alloc, State>::type;
@@ -1492,7 +1569,9 @@ namespace ps
         if (_state)
         {
             if (!_state->has_value() && _state->use_count() > 1)
+            {
                 _state->set_exception(std::make_exception_ptr(future_error(make_error_code(future_errc::broken_promise))));
+            }
             _state->release_shared();
         }
     }
@@ -1501,7 +1580,9 @@ namespace ps
     future<T&> promise<T&>::get_future()
     {
         if (_state == nullptr)
+        {
             throw_future_error(future_errc::no_state);
+        }
         return future<T&>(_state);
     }
 
@@ -1509,16 +1590,20 @@ namespace ps
     void promise<T&>::set_value(T& r)
     {
         if (_state == nullptr)
+        {
             throw_future_error(future_errc::no_state);
+        }
         _state->set_value(r);
     }
 
     template<class T>
-    void promise<T&>::set_exception(std::exception_ptr p)
+    void promise<T&>::set_exception(const std::exception_ptr& p)
     {
         ASSERT(p != nullptr, "promise::set_exception: received nullptr");
         if (_state == nullptr)
+        {
             throw_future_error(future_errc::no_state);
+        }
         _state->set_exception(p);
     }
 
@@ -1526,16 +1611,20 @@ namespace ps
     void promise<T&>::set_value_at_thread_exit(T& r)
     {
         if (_state == nullptr)
+        {
             throw_future_error(future_errc::no_state);
+        }
         _state->set_value_at_thread_exit(r);
     }
 
     template<class T>
-    void promise<T&>::set_exception_at_thread_exit(std::exception_ptr p)
+    void promise<T&>::set_exception_at_thread_exit(const std::exception_ptr& p)
     {
         ASSERT(p != nullptr, "promise::set_exception_at_thread_exit: received nullptr");
         if (_state == nullptr)
+        {
             throw_future_error(future_errc::no_state);
+        }
         _state->set_exception_at_thread_exit(p);
     }
 
@@ -1556,7 +1645,7 @@ namespace ps
     public:
         promise();
         template<class Allocator>
-        promise(std::allocator_arg_t, const Allocator& a);
+        promise(std::allocator_arg_t /*unused*/, const Allocator& a0);
         inline promise(promise&& rhs) noexcept : _state(rhs._state)
         {
             rhs._state = nullptr;
@@ -1578,14 +1667,14 @@ namespace ps
         future<void> get_future();
 
         void set_value();
-        void set_exception(std::exception_ptr p);
+        void set_exception(const std::exception_ptr& p);
 
         void set_value_at_thread_exit();
-        void set_exception_at_thread_exit(std::exception_ptr p);
+        void set_exception_at_thread_exit(const std::exception_ptr& p);
     };
 
     template<class Alloc>
-    promise<void>::promise(std::allocator_arg_t, const Alloc& a0)
+    promise<void>::promise(std::allocator_arg_t /*unused*/, const Alloc& a0)
     {
         using State = assoc_sub_state_alloc<Alloc>;
         using A2 = typename allocator_traits_rebind<Alloc, State>::type;
@@ -1663,7 +1752,7 @@ namespace ps
         {
         }
         template<class F, class Allocator, class = typename std::enable_if<!std::is_same<typename std::decay<F>::type, packaged_task>::value>::type>
-        inline packaged_task(std::allocator_arg_t, const Allocator& a, F&& f) : _f(std::allocator_arg, a, std::forward<F>(f)), _p(std::allocator_arg, a)
+        inline packaged_task(std::allocator_arg_t /*unused*/, const Allocator& a, F&& f) : _f(std::allocator_arg, a, std::forward<F>(f)), _p(std::allocator_arg, a)
         {
         }
         ~packaged_task() = default;
@@ -1706,9 +1795,13 @@ namespace ps
     void packaged_task<R(ArgTypes...)>::operator()(ArgTypes... args)
     {
         if (_p._state == nullptr)
+        {
             throw_future_error(future_errc::no_state);
+        }
         if (_p._state->has_value())
+        {
             throw_future_error(future_errc::promise_already_satisfied);
+        }
         try
         {
             _p.set_value(_f(std::forward<ArgTypes>(args)...));
@@ -1723,9 +1816,13 @@ namespace ps
     void packaged_task<R(ArgTypes...)>::make_ready_at_thread_exit(ArgTypes... args)
     {
         if (_p._state == nullptr)
+        {
             throw_future_error(future_errc::no_state);
+        }
         if (_p._state->has_value())
+        {
             throw_future_error(future_errc::promise_already_satisfied);
+        }
         try
         {
             _p.set_value_at_thread_exit(_f(std::forward<ArgTypes>(args)...));
@@ -1740,7 +1837,9 @@ namespace ps
     void packaged_task<R(ArgTypes...)>::reset()
     {
         if (!valid())
+        {
             throw_future_error(future_errc::no_state);
+        }
         _p = promise<result_type>();
     }
 
@@ -1763,7 +1862,7 @@ namespace ps
         {
         }
         template<class F, class Allocator, class = typename std::enable_if<!std::is_same<typename std::decay<F>::type, packaged_task>::value>::type>
-        inline packaged_task(std::allocator_arg_t, const Allocator& a, F&& f) : _f(std::allocator_arg, a, std::forward<F>(f)), _p(std::allocator_arg, a)
+        inline packaged_task(std::allocator_arg_t /*unused*/, const Allocator& a, F&& f) : _f(std::allocator_arg, a, std::forward<F>(f)), _p(std::allocator_arg, a)
         {
         }
         ~packaged_task() = default;
@@ -1806,9 +1905,13 @@ namespace ps
     void packaged_task<void(ArgTypes...)>::operator()(ArgTypes... args)
     {
         if (_p._state == nullptr)
+        {
             throw_future_error(future_errc::no_state);
+        }
         if (_p._state->has_value())
+        {
             throw_future_error(future_errc::promise_already_satisfied);
+        }
         try
         {
             _f(std::forward<ArgTypes>(args)...);
@@ -1824,9 +1927,13 @@ namespace ps
     void packaged_task<void(ArgTypes...)>::make_ready_at_thread_exit(ArgTypes... args)
     {
         if (_p._state == nullptr)
+        {
             throw_future_error(future_errc::no_state);
+        }
         if (_p._state->has_value())
+        {
             throw_future_error(future_errc::promise_already_satisfied);
+        }
         try
         {
             _f(std::forward<ArgTypes>(args)...);
@@ -1842,7 +1949,9 @@ namespace ps
     void packaged_task<void(ArgTypes...)>::reset()
     {
         if (!valid())
+        {
             throw_future_error(future_errc::no_state);
+        }
         _p = promise<result_type>();
     }
 
@@ -1884,10 +1993,18 @@ namespace ps
         inline explicit async_func(F&& f, Args&&... args) : _f(std::move(f), std::move(args)...)
         {
         }
-
-        inline async_func(async_func&& f) : _f(std::move(f._f))
+        async_func(const async_func& f) = delete;
+        async_func& operator=(const async_func& f) = delete;
+        inline async_func(async_func&& f) noexcept : _f(std::move(f._f))
         {
         }
+        inline async_func& operator=(async_func&& f) noexcept
+        {
+            _f = std::move(f._f);
+            return *this;
+        }
+        ~async_func() = default;
+
 
         R operator()()
         {
@@ -1896,12 +2013,16 @@ namespace ps
         }
     private:
         template<std::size_t ...Indices>
-        R execute(tuple_indices<Indices...>)
+        R execute(tuple_indices<Indices...> /*unused*/)
         {
             if constexpr(is_future<future_async_ret_t<F, Args...>>::value)
+            {
                 return ps::invoke(std::move(std::get<0>(_f)), std::move(std::get<Indices>(_f))...).get();
+            }
             else
+            {
                 return ps::invoke(std::move(std::get<0>(_f)), std::move(std::get<Indices>(_f))...);
+            }
         }
     };
 
@@ -1920,16 +2041,22 @@ namespace ps
         try
         {
             if (does_policy_contain(policy, launch::async))
+            {
                 return make_async_assoc_state<R>(BF(decay_copy(std::forward<F>(f)), decay_copy(std::forward<Args>(args))...));
+            }
         }
         catch (...)
         {
             if (policy == launch::async)
+            {
                 throw;
+            }
         }
 
         if (does_policy_contain(policy, launch::deferred))
+        {
             return make_deferred_assoc_state<R>(BF(decay_copy(std::forward<F>(f)), decay_copy(std::forward<Args>(args))...));
+        }
         return future<R>{};
     }
 
@@ -1969,14 +2096,20 @@ namespace ps
                 std::lock_guard<std::mutex> lock(shared_context->mutex);
                 ++shared_context->ready_futures;
                 if (exception != nullptr)
+                {
                     shared_context->e = exception;
+                }
 
                 if (shared_context->ready_futures == shared_context->total_futures)
                 {
                     if (shared_context->e != nullptr)
+                    {
                         shared_context->p.set_exception(shared_context->e);
+                    }
                     else
+                    {
                         shared_context->p.set_value(std::move(shared_context->result));
+                    }
                 }
             });
         }
@@ -1987,24 +2120,30 @@ namespace ps
     template<std::size_t I, typename Context, typename Future>
     void __attribute__((__visibility__("hidden"))) when_inner_helper(Context context, Future&& f)
     {
-        std::get<I>(context->result) = std::move(f);
+        std::get<I>(context->result) = std::forward<Future>(f);
         std::get<I>(context->result).then([context](const std::exception_ptr exception) {
             std::lock_guard<std::mutex> lock(context->mutex);
             ++context->ready_futures;
             if (exception != nullptr)
+            {
                 context->e = exception;
+            }
             if (context->ready_futures == context->total_futures)
             {
                 if (context->e != nullptr)
+                {
                     context->p.set_exception(context->e);
+                }
                 else
+                {
                     context->p.set_value(std::move(context->result));
+                }
             }
         });
     }
 
     template<std::size_t I, typename Context>
-    void __attribute__((__visibility__("hidden"))) apply_helper(const Context&)
+    void __attribute__((__visibility__("hidden"))) apply_helper(const Context& /*unused*/)
     {
     }
 
@@ -2021,7 +2160,7 @@ namespace ps
         using result_inner_type = std::tuple<std::decay_t<Futures>...>;
         struct context_all
         {
-            std::size_t total_futures;
+            std::size_t total_futures = 0;
             std::size_t ready_futures = 0;
             result_inner_type result;
             promise<result_inner_type> p;
@@ -2085,15 +2224,21 @@ namespace ps
                         shared_context->ready = true;
                     }
                     else
+                    {
                         shared_context->result.index = index;
+                    }
 
                     if (shared_context->processed == shared_context->total && !shared_context->result_moved && (exception == nullptr || shared_context->failled == shared_context->total))
                     {
                         shared_context->result_moved = true;
                         if (shared_context->failled == shared_context->total)
+                        {
                             shared_context->p.set_exception(shared_context->e);
+                        }
                         else
+                        {
                             shared_context->p.set_value(std::move(shared_context->result));
+                        }
                     }
                 }
             });
@@ -2105,9 +2250,13 @@ namespace ps
         {
             shared_context->result_moved = true;
             if (shared_context->failled == shared_context->total)
+            {
                 shared_context->p.set_exception(shared_context->e);
+            }
             else
+            {
                 shared_context->p.set_value(std::move(shared_context->result));
+            }
         }
 
         return result_future;
@@ -2132,15 +2281,21 @@ namespace ps
                     context->result.index = I;
                 }
                 else
+                {
                     context->result.index = I;
+                }
 
                 if (context->processed == context->total && !context->result_moved && (exception == nullptr || context->failled == context->total))
                 {
                     context->result_moved = true;
                     if (context->failled == context->total)
+                    {
                         context->p.set_exception(context->e);
+                    }
                     else
+                    {
                         context->p.set_value(std::move(context->result));
+                    }
                 }
             }
         });
@@ -2162,20 +2317,20 @@ namespace ps
     struct __attribute__((__visibility__("hidden"))) when_any_helper_struct<S, S>
     {
         template<typename Context, typename... Futures>
-        static void apply(const Context&, std::tuple<Futures...>&)
+        static void apply(const Context& /*unused*/, std::tuple<Futures...>& /*unused*/)
         {
         }
     };
 
     template<size_t I, typename Context>
-    void __attribute__((__visibility__("hidden"))) fill_result_helper(const Context&)
+    void __attribute__((__visibility__("hidden"))) fill_result_helper(const Context& /*unused*/)
     {
     }
 
     template<size_t I, typename Context, typename FirstFuture, typename... Futures>
     void __attribute__((__visibility__("hidden"))) fill_result_helper(const Context& context, FirstFuture&& f, Futures&&... fs)
     {
-        std::get<I>(context->result.sequence) = std::move(f);
+        std::get<I>(context->result.sequence) = std::forward<FirstFuture>(f);
         fill_result_helper<I+1>(context, std::forward<Futures>(fs)...);
     }
 
@@ -2203,14 +2358,20 @@ namespace ps
 
         fill_result_helper<0>(shared_context, std::forward<Futures>(futures)...);
         when_any_helper_struct<0, sizeof...(futures)>::apply(shared_context, shared_context->result.sequence);
-        std::lock_guard<std::mutex> lock(shared_context->mutex);
-        if ((shared_context->ready || shared_context->failled == shared_context->total) && !shared_context->result_moved)
         {
-            shared_context->result_moved = true;
-            if (shared_context->failled == shared_context->total)
-                shared_context->p.set_exception(shared_context->e);
-            else
-                shared_context->p.set_value(std::move(shared_context->result));
+            std::lock_guard<std::mutex> lock(shared_context->mutex);
+            if ((shared_context->ready || shared_context->failled == shared_context->total) && !shared_context->result_moved)
+            {
+                shared_context->result_moved = true;
+                if (shared_context->failled == shared_context->total)
+                {
+                    shared_context->p.set_exception(shared_context->e);
+                }
+                else
+                {
+                    shared_context->p.set_value(std::move(shared_context->result));
+                }
+            }
         }
         return shared_context->p.get_future();
     }
@@ -2220,14 +2381,14 @@ namespace ps
     template<class T>
     class shared_future
     {
-        assoc_state<T>* _state;
+        assoc_state<T>* _state{nullptr};
 
         template<typename InputIt>
         friend auto when_all(InputIt first, InputIt last) -> future<std::vector<typename std::iterator_traits<InputIt>::value_type>>;
         template<std::size_t I, typename Context, typename Future>
         friend void __attribute__((__visibility__("hidden"))) when_inner_helper(Context context, Future&& f);
 
-        void then(packaged_task_function<void(std::exception_ptr)>&& continuation);
+        void then(packaged_task_function<void(const std::exception_ptr&)>&& continuation);
 
     public:
         inline shared_future() noexcept : _state(nullptr)
@@ -2235,8 +2396,10 @@ namespace ps
         }
         inline shared_future(const shared_future& rhs) noexcept : _state(rhs._state)
         {
-            if (_state)
+            if (_state != nullptr)
+            {
                 _state->add_shared();
+            }
         }
         inline shared_future(future<T>&& f) noexcept : _state(f._state)
         {
@@ -2271,8 +2434,10 @@ namespace ps
 
         inline bool is_ready() const
         {
-            if (_state)
+            if (_state != nullptr)
+            {
                 return _state->is_ready();
+            }
             return false;
         }
 
@@ -2299,17 +2464,23 @@ namespace ps
     shared_future<T>::~shared_future()
     {
         if (_state)
+        {
             _state->release_shared();
+        }
     }
 
     template<class T>
     shared_future<T>& shared_future<T>::operator=(const shared_future& rhs) noexcept
     {
         if (rhs._state)
+        {
             rhs._state->add_shared();
+        }
 
         if (_state)
+        {
             _state->release_shared();
+        }
 
         _state = rhs._state;
         return *this;
@@ -2322,7 +2493,7 @@ namespace ps
     }
 
     template<class T>
-    void shared_future<T>::then(packaged_task_function<void(std::exception_ptr)>&& continuation)
+    void shared_future<T>::then(packaged_task_function<void(const std::exception_ptr&)>&& continuation)
     {
         return _state->then(std::move(continuation));
     }
@@ -2346,7 +2517,7 @@ namespace ps
         template<std::size_t I, typename Context, typename Future>
         friend void __attribute__((__visibility__("hidden"))) when_inner_helper(Context context, Future&& f);
 
-        void then(packaged_task_function<void(std::exception_ptr)>&& continuation);
+        void then(packaged_task_function<void(const std::exception_ptr&)>&& continuation);
 
     public:
         inline shared_future() noexcept : _state(nullptr)
@@ -2355,7 +2526,9 @@ namespace ps
         inline shared_future(const shared_future& rhs) : _state(rhs._state)
         {
             if (_state)
+            {
                 _state->add_shared();
+            }
         }
         inline shared_future(future<T&>&& f) noexcept : _state(f._state)
         {
@@ -2391,7 +2564,9 @@ namespace ps
         inline bool is_ready() const
         {
             if (_state)
+            {
                 return _state->is_ready();
+            }
             return false;
         }
 
@@ -2418,16 +2593,22 @@ namespace ps
     shared_future<T&>::~shared_future()
     {
         if (_state)
+        {
             _state->release_shared();
+        }
     }
 
     template<class T>
     shared_future<T&>& shared_future<T&>::operator=(const shared_future& rhs)
     {
         if (rhs._state)
+        {
             rhs._state->add_shared();
+        }
         if (_state)
+        {
             _state->release_shared();
+        }
         _state = rhs._state;
         return *this;
     }
@@ -2446,7 +2627,7 @@ namespace ps
     }
 
     template<class T>
-    void shared_future<T&>::then(packaged_task_function<void(std::exception_ptr)>&& continuation)
+    void shared_future<T&>::then(packaged_task_function<void(const std::exception_ptr&)>&& continuation)
     {
         return _state->then(std::move(continuation));
     }
@@ -2456,14 +2637,14 @@ namespace ps
     template<>
     class shared_future<void>
     {
-        assoc_sub_state* _state;
+        assoc_sub_state* _state{nullptr};
 
         template<typename InputIt>
         friend auto when_all(InputIt first, InputIt last) -> future<std::vector<typename std::iterator_traits<InputIt>::value_type>>;
         template<std::size_t I, typename Context, typename Future>
         friend void __attribute__((__visibility__("hidden"))) when_inner_helper(Context context, Future&& f);
 
-        void then(packaged_task_function<void(std::exception_ptr)>&& continuation);
+        void then(packaged_task_function<void(const std::exception_ptr&)>&& continuation);
 
     public:
         inline shared_future() noexcept : _state(nullptr)
@@ -2471,8 +2652,10 @@ namespace ps
         }
         inline shared_future(const shared_future& rhs) : _state(rhs._state)
         {
-            if (_state)
+            if (_state != nullptr)
+            {
                 _state->add_shared();
+            }
         }
         inline shared_future(future<void>&& f) noexcept : _state(f._state)
         {
@@ -2507,8 +2690,10 @@ namespace ps
 
         inline bool is_ready() const
         {
-            if (_state)
+            if (_state != nullptr)
+            {
                 return _state->is_ready();
+            }
             return false;
         }
 
@@ -2547,9 +2732,10 @@ namespace ps
     {
         x.swap(y);
     }
-}
+} // namespace ps
 
-namespace std {
+namespace std
+{
 
     template<>
     struct std::is_error_code_enum<ps::future_errc> : public std::true_type
@@ -2566,4 +2752,4 @@ namespace std {
     {
     };
 
-}
+} // namespace std

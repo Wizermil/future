@@ -39,8 +39,8 @@ namespace ps
     class __attribute__((__visibility__("hidden"))) future_error_category : public do_message
     {
     public:
-        virtual const char* name() const noexcept;
-        virtual std::string message(int ev) const;
+        const char* name() const noexcept override;
+        std::string message(int ev) const override;
     };
 
     const char* future_error_category::name() const noexcept
@@ -99,65 +99,87 @@ namespace ps
         {
             std::unique_lock<std::mutex> lk(_mut);
             if (has_value())
+            {
                 throw future_error(make_error_code(future_errc::promise_already_satisfied));
+            }
             _status |= constructed | ready;
             _cv.notify_all();
             if (has_continuation())
+            {
                 continuation = true;
+            }
         }
         if (continuation)
-            _continuation(_exception);
+        {
+            ps::invoke(std::move(_continuation), _exception);
+        }
     }
 
     void assoc_sub_state::set_value_at_thread_exit()
     {
         std::unique_lock<std::mutex> lk(_mut);
         if (has_value())
+        {
             throw future_error(make_error_code(future_errc::promise_already_satisfied));
+        }
         _status |= constructed;
         ASSERT(thread_local_data().get() != nullptr, "");
         thread_local_data()->make_ready_at_thread_exit(this);
     }
 
-    void assoc_sub_state::set_exception(std::exception_ptr p)
+    void assoc_sub_state::set_exception(const std::exception_ptr& p)
     {
         bool continuation = false;
         {
             std::unique_lock<std::mutex> lk(_mut);
             if (has_value())
+            {
                 throw future_error(make_error_code(future_errc::promise_already_satisfied));
+            }
             _exception = p;
             _status |= ready;
             _cv.notify_all();
             if (has_continuation())
+            {
                 continuation = true;
+            }
         }
         if (continuation)
-            _continuation(_exception);
+        {
+            ps::invoke(std::move(_continuation), _exception);
+        }
     }
 
-    void assoc_sub_state::set_exception_at_thread_exit(std::exception_ptr p)
+    void assoc_sub_state::set_exception_at_thread_exit(const std::exception_ptr& p)
     {
         std::unique_lock<std::mutex> lk(_mut);
         if (has_value())
+        {
             throw future_error(make_error_code(future_errc::promise_already_satisfied));
+        }
         _exception = p;
         thread_local_data()->make_ready_at_thread_exit(this);
     }
 
-    void assoc_sub_state::then(packaged_task_function<void(std::exception_ptr)>&& continuation)
+    void assoc_sub_state::then(packaged_task_function<void(const std::exception_ptr&)>&& continuation)
     {
         bool ready = false;
         {
             std::unique_lock<std::mutex> lk(_mut);
             _status |= continuation_attached;
             if (is_ready())
+            {
                 ready = true;
+            }
             else
+            {
                 _continuation = std::move(continuation);
+            }
         }
         if (ready)
-            continuation(_exception);
+        {
+            ps::invoke(std::move(continuation), _exception);
+        }
     }
 
     void assoc_sub_state::make_ready()
@@ -167,7 +189,9 @@ namespace ps
             _status |= ready;
         }
         if (has_continuation())
-            _continuation(_exception);
+        {
+            ps::invoke(std::move(_continuation), _exception);
+        }
         _cv.notify_all();
     }
 
@@ -176,7 +200,9 @@ namespace ps
         std::unique_lock<std::mutex> lk(_mut);
         sub_wait(lk);
         if (_exception != nullptr)
+        {
             std::rethrow_exception(_exception);
+        }
     }
 
     void assoc_sub_state::wait()
@@ -189,15 +215,19 @@ namespace ps
     {
         if (!is_ready())
         {
-            if (_status & static_cast<unsigned>(deferred))
+            if ((_status & static_cast<unsigned>(deferred)) == static_cast<unsigned>(deferred))
             {
                 _status &= ~static_cast<unsigned>(deferred);
                 lk.unlock();
                 execute();
             }
             else
+            {
                 while (!is_ready())
+                {
                     _cv.wait(lk);
+                }
+            }
         }
     }
 
@@ -211,15 +241,19 @@ namespace ps
     future<void>::future(assoc_sub_state* state) : _state(state)
     {
         if (_state->has_future_attached())
+        {
             throw future_error(make_error_code(future_errc::future_already_retrieved));
+        }
         _state->add_shared();
         _state->set_future_attached();
     }
 
     future<void>::~future()
     {
-        if (_state)
+        if (_state != nullptr)
+        {
             _state->release_shared();
+        }
     }
 
     void future<void>::get()
@@ -230,7 +264,7 @@ namespace ps
         s->copy();
     }
 
-    void future<void>::then(packaged_task_function<void(std::exception_ptr)>&& continuation)
+    void future<void>::then(packaged_task_function<void(const std::exception_ptr&)>&& continuation)
     {
         return _state->then(std::move(continuation));
     }
@@ -250,10 +284,12 @@ namespace ps
 
     promise<void>::~promise()
     {
-        if (_state)
+        if (_state != nullptr)
         {
             if (!_state->has_value() && _state->use_count() > 1)
+            {
                 _state->set_exception(std::make_exception_ptr<future_error>(make_error_code(future_errc::broken_promise)));
+            }
             _state->release_shared();
         }
     }
@@ -261,35 +297,45 @@ namespace ps
     future<void> promise<void>::get_future()
     {
         if (_state == nullptr)
+        {
             throw future_error(make_error_code(future_errc::no_state));
+        }
         return future<void>(_state);
     }
 
     void promise<void>::set_value()
     {
         if (_state == nullptr)
+        {
             throw future_error(make_error_code(future_errc::no_state));
+        }
         _state->set_value();
     }
 
-    void promise<void>::set_exception(std::exception_ptr p)
+    void promise<void>::set_exception(const std::exception_ptr& p)
     {
         if (_state == nullptr)
+        {
             throw future_error(make_error_code(future_errc::no_state));
+        }
         _state->set_exception(p);
     }
 
     void promise<void>::set_value_at_thread_exit()
     {
         if (_state == nullptr)
+        {
             throw future_error(make_error_code(future_errc::no_state));
+        }
         _state->set_value_at_thread_exit();
     }
 
-    void promise<void>::set_exception_at_thread_exit(std::exception_ptr p)
+    void promise<void>::set_exception_at_thread_exit(const std::exception_ptr& p)
     {
         if (_state == nullptr)
+        {
             throw future_error(make_error_code(future_errc::no_state));
+        }
         _state->set_exception_at_thread_exit(p);
     }
 
@@ -297,13 +343,15 @@ namespace ps
 
     shared_future<void>::~shared_future()
     {
-        if (_state)
+        if (_state != nullptr)
+        {
             _state->release_shared();
+        }
     }
 
-    void shared_future<void>::then(packaged_task_function<void(std::exception_ptr)>&& continuation)
+    void shared_future<void>::then(packaged_task_function<void(const std::exception_ptr&)>&& continuation)
     {
         return _state->then(std::move(continuation));
     }
 
-}
+} // namespace ps

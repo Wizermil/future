@@ -29,14 +29,14 @@
 
 #include "thread.hpp"
 
-#include <vector>
-#include <cstddef>
-#include <utility>
 #include "future.hpp"
+#include <cstddef>
+#include <ctime>
+#include <limits>
 #include <sys/errno.h>
 #include <sys/sysctl.h>
-#include <time.h>
-#include <limits>
+#include <utility>
+#include <vector>
 
 namespace ps
 {
@@ -53,7 +53,7 @@ namespace ps
         {
             return static_cast<T*>(::operator new(n * sizeof(T)));
         }
-        inline void deallocate(T* p, std::size_t)
+        inline void deallocate(T* p, std::size_t /*unused*/)
         {
             ::operator delete(static_cast<void*>(p));
         }
@@ -74,11 +74,11 @@ namespace ps
         AsyncStates _async_states;
         Notify _notify;
     public:
-        thread_struct_imp()
-        {
-        }
+        thread_struct_imp() = default;
         thread_struct_imp(const thread_struct_imp&) =delete;
         thread_struct_imp& operator=(const thread_struct_imp&) = delete;
+        thread_struct_imp(thread_struct_imp&&) noexcept =delete;
+        thread_struct_imp& operator=(thread_struct_imp&&) noexcept = delete;
         ~thread_struct_imp();
 
         void notify_all_at_thread_exit(std::condition_variable* cv, std::mutex* m);
@@ -101,7 +101,7 @@ namespace ps
 
     void thread_struct_imp::notify_all_at_thread_exit(std::condition_variable* cv, std::mutex* m)
     {
-        _notify.push_back(std::pair<std::condition_variable*, std::mutex*>(cv, m));
+        _notify.emplace_back(std::pair<std::condition_variable*, std::mutex*>(cv, m));
     }
 
     void thread_struct_imp::make_ready_at_thread_exit(assoc_sub_state* s)
@@ -144,7 +144,9 @@ namespace ps
     thread::~thread()
     {
         if (_t != nullptr)
+        {
             std::terminate();
+        }
     }
 
     void thread::join()
@@ -154,11 +156,15 @@ namespace ps
         {
             ec = pthread_join(_t, nullptr);
             if (ec == 0)
+            {
                 _t = nullptr;
+            }
         }
 
-        if (ec)
+        if (ec != 0)
+        {
             throw_system_error(ec, "thread::join failed");
+        }
     }
 
     void thread::detach()
@@ -168,11 +174,15 @@ namespace ps
         {
             ec = pthread_detach(_t);
             if (ec == 0)
+            {
                 _t = nullptr;
+            }
         }
 
-        if (ec)
+        if (ec != 0)
+        {
             throw_system_error(ec, "thread::detach failed");
+        }
     }
 
     unsigned thread::hardware_concurrency() noexcept
@@ -180,7 +190,7 @@ namespace ps
         unsigned n;
         int mib[2] = {CTL_HW, HW_NCPU};
         std::size_t s = sizeof(n);
-        sysctl(mib, 2, &n, &s, 0, 0);
+        sysctl(mib, 2, &n, &s, nullptr, 0);
         return n;
     }
 
@@ -190,9 +200,8 @@ namespace ps
         {
             if (ns > std::chrono::nanoseconds::zero())
             {
-                using namespace std::chrono;
-                seconds s = duration_cast<seconds>(ns);
-                timespec ts;
+                std::chrono::seconds s = std::chrono::duration_cast<std::chrono::seconds>(ns);
+                timespec ts{};
                 using ts_sec = decltype(ts.tv_sec);
                 constexpr ts_sec ts_sec_max = std::numeric_limits<ts_sec>::max();
 
@@ -207,9 +216,11 @@ namespace ps
                     ts.tv_nsec = 999999999; // (10^9 - 1)
                 }
 
-                while (nanosleep(&ts, &ts) == -1 && errno == EINTR);
+                while (nanosleep(&ts, &ts) == -1 && errno == EINTR)
+                {
+                }
             }
         }
-    }
+    } // namespace this_thread
 
-}
+} // namespace ps

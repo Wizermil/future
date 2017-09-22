@@ -29,8 +29,8 @@
 
 #pragma once
 
-#include <system_error>
 #include <string>
+#include <system_error>
 
 namespace ps
 {
@@ -40,7 +40,7 @@ namespace ps
     class __attribute__((__visibility__("hidden"))) do_message : public std::error_category
     {
     public:
-        virtual std::string message(int ev) const;
+        std::string message(int ev) const override;
     };
 
-}
+} // namespace ps
