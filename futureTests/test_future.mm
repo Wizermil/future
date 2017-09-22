@@ -1905,9 +1905,12 @@
 - (void)testWhenAnyVoid {
     using namespace std::chrono_literals;
 
+    constexpr auto dur_epsilon = 4ms;
+
     int i = 0, j = 0;
     std::vector<ps::future<void>> vec1;
     vec1.reserve(2);
+    auto now = std::chrono::high_resolution_clock::now();
     vec1.emplace_back(ps::async([&i]() {
         ps::this_thread::sleep_for(10ms);
         i = 4;
@@ -1918,13 +1921,16 @@
     }));
     auto fut1 = ps::when_any(vec1.begin(), vec1.end());
     auto ret1 = fut1.get();
+    auto res = (std::chrono::high_resolution_clock::now() - now);
+    XCTAssertGreaterThan(res, 5ms);
+    XCTAssertLessThan(res, 5ms+dur_epsilon);
     XCTAssertEqual(ret1.index, 1);
-    XCTAssertEqual(i, 0);
     XCTAssertEqual(j, 2);
 
     i = 0;
     std::string k = "";
     float l = 0.f;
+    now = std::chrono::high_resolution_clock::now();
     auto fut2 = ps::when_any(ps::async([&i]() {
         ps::this_thread::sleep_for(10ms);
         i = 4;
@@ -1938,20 +1944,23 @@
         l = 8.8f;
     }));
     auto ret2 = fut2.get();
+    res = (std::chrono::high_resolution_clock::now() - now);
+    XCTAssertGreaterThan(res, 1ms);
+    XCTAssertLessThan(res, 1ms+dur_epsilon);
     XCTAssertEqual(ret2.index, 2);
-    XCTAssertEqual(i, 0);
-    XCTAssertEqual(k, std::string(""));
     XCTAssertEqualWithAccuracy(l, 8.8f, std::numeric_limits<float>::epsilon());
 
     i = 0;
     j = 0;
     int m = 0;
+    now = std::chrono::high_resolution_clock::now();
     auto fut3 = ps::when_any(ps::async([&i]() {
-        ps::this_thread::sleep_for(10ms);
+        ps::this_thread::sleep_for(4ms);
         i = 4;
     }),
                              ps::async([&j]() {
-        ps::this_thread::sleep_for(5ms);
+        ps::this_thread::sleep_for(2ms);
+        j = 2;
         throw std::logic_error("logic_error3");
     }),
                              ps::async([&m]() {
@@ -1959,14 +1968,16 @@
         m = 8;
     }));
     auto ret3 = fut3.get();
+    res = (std::chrono::high_resolution_clock::now() - now);
+    XCTAssertGreaterThan(res, 1ms);
+    XCTAssertLessThan(res, 1ms+dur_epsilon);
     XCTAssertEqual(ret3.index, 2);
-    XCTAssertEqual(i, 0);
-    XCTAssertEqual(j, 0);
     XCTAssertEqual(m, 8);
 
     i = 0;
     k = "";
     l = 0.f;
+    now = std::chrono::high_resolution_clock::now();
     auto fut4 = ps::when_any(ps::async([&i]() {
         ps::this_thread::sleep_for(8ms);
         i = 4;
@@ -1983,31 +1994,36 @@
         l = 8.8f;
     }));
     auto ret4 = fut4.get();
+    res = (std::chrono::high_resolution_clock::now() - now);
+    XCTAssertGreaterThan(res, 1ms);
+    XCTAssertLessThan(res, 1ms+dur_epsilon);
     XCTAssertEqual(ret4.index, 2);
-    XCTAssertEqual(i, 0);
-    XCTAssertEqual(k, std::string(""));
     XCTAssertEqualWithAccuracy(l, 8.8f, std::numeric_limits<float>::epsilon());
 
     i = 0;
     j = 0;
     std::vector<ps::future<void>> vec5;
     vec5.reserve(2);
+    now = std::chrono::high_resolution_clock::now();
     vec5.emplace_back(ps::async([&i]() {
-        ps::this_thread::sleep_for(10ms);
+        ps::this_thread::sleep_for(8ms);
         i = 4;
     }));
     vec5.emplace_back(ps::async([&j]() {
-        ps::this_thread::sleep_for(5ms);
+        ps::this_thread::sleep_for(15ms);
         return ps::async([&j]() {
-            ps::this_thread::sleep_for(5ms);
+            ps::this_thread::sleep_for(15ms);
+            j = 2;
             throw std::logic_error("logic_error4");
         });
     }));
     auto fut5 = ps::when_any(vec5.begin(), vec5.end());
     auto ret5 = fut5.get();
+    res = (std::chrono::high_resolution_clock::now() - now);
+    XCTAssertGreaterThan(res, 8ms);
+    XCTAssertLessThan(res, 8ms+dur_epsilon);
     XCTAssertEqual(ret5.index, 0);
     XCTAssertEqual(i, 4);
-    XCTAssertEqual(j, 0);
 }
 
 - (void)testMakeReady {
