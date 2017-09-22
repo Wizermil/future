@@ -182,7 +182,7 @@ namespace ps
         inline packaged_task_func(F&& f, const Alloc& a) : _f(std::move(f), a)
         {
         }
-        virtual void move_to(packaged_task_base<R(ArgTypes...)>* /*p*/) noexcept;
+        virtual void move_to(packaged_task_base<R(ArgTypes...)>* p) noexcept;
         virtual void destroy();
         virtual void destroy_deallocate();
         virtual R operator()(ArgTypes&& ... args);

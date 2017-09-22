@@ -66,8 +66,8 @@ namespace ps
         thread_struct& operator=(thread_struct&&) noexcept = delete;
         ~thread_struct();
         
-        void notify_all_at_thread_exit(std::condition_variable* /*cv*/, std::mutex* /*m*/);
-        void make_ready_at_thread_exit(assoc_sub_state* /*s*/);
+        void notify_all_at_thread_exit(std::condition_variable* cv, std::mutex* m);
+        void make_ready_at_thread_exit(assoc_sub_state* s);
     };
     
     template<class T>

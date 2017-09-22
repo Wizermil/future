@@ -43,7 +43,7 @@ namespace ps
         constexpr std::size_t strerror_buff_size = 1024;
         
         std::string do_strerror_r(int ev);
-        __attribute__((unused)) const char* handle_strerror_r_return(const char* strerror_return, char* /*buffer*/)
+        __attribute__((unused)) const char* handle_strerror_r_return(const char* strerror_return, char* buffer)
         {
             return strerror_return;
         }

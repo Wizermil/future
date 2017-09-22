@@ -53,9 +53,9 @@ namespace ps
         const char* msg {nullptr};
     };
 
-    using libcpp_debug_function_type = std::add_pointer<void(const libcpp_debug_info& /*info*/)>::type;
+    using libcpp_debug_function_type = std::add_pointer<void(const libcpp_debug_info& info)>::type;
 
-    [[noreturn]] void libcpp_abort_debug_function(const libcpp_debug_info& /*info*/);
+    [[noreturn]] void libcpp_abort_debug_function(const libcpp_debug_info& info);
 
     extern libcpp_debug_function_type libcpp_debug_function;
 
