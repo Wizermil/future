@@ -40,15 +40,15 @@
 
 namespace ps
 {
-
+    
     // hidden_allocator
-
+    
     template<class T>
     class __attribute__((__visibility__("hidden"))) hidden_allocator
     {
     public:
         using value_type = T;
-
+        
         inline T* allocate(std::size_t n)
         {
             return static_cast<T*>(::operator new(n * sizeof(T)));
@@ -57,20 +57,20 @@ namespace ps
         {
             ::operator delete(static_cast<void*>(p));
         }
-
+        
         inline std::size_t max_size() const
         {
             return size_t(~0) / sizeof(T);
         }
     };
-
+    
     // thread_struct_imp
-
+    
     class __attribute__((__visibility__("hidden"))) thread_struct_imp
     {
         using AsyncStates = std::vector<assoc_sub_state*, hidden_allocator<assoc_sub_state*>>;
         using Notify = std::vector<std::pair<std::condition_variable*, std::mutex*>, hidden_allocator<std::pair<std::condition_variable*, std::mutex*>>>;
-
+        
         AsyncStates _async_states;
         Notify _notify;
     public:
@@ -80,11 +80,11 @@ namespace ps
         thread_struct_imp(thread_struct_imp&&) noexcept =delete;
         thread_struct_imp& operator=(thread_struct_imp&&) noexcept = delete;
         ~thread_struct_imp();
-
+        
         void notify_all_at_thread_exit(std::condition_variable* cv, std::mutex* m);
         void make_ready_at_thread_exit(assoc_sub_state* s);
     };
-
+    
     thread_struct_imp::~thread_struct_imp()
     {
         for (const auto& notify : _notify)
@@ -98,49 +98,49 @@ namespace ps
             async_state->release_shared();
         }
     }
-
+    
     void thread_struct_imp::notify_all_at_thread_exit(std::condition_variable* cv, std::mutex* m)
     {
         _notify.emplace_back(std::pair<std::condition_variable*, std::mutex*>(cv, m));
     }
-
+    
     void thread_struct_imp::make_ready_at_thread_exit(assoc_sub_state* s)
     {
         _async_states.push_back(s);
         s->add_shared();
     }
-
+    
     // thread_struct
-
+    
     thread_struct::thread_struct() : _p(new thread_struct_imp)
     {
     }
-
+    
     thread_struct::~thread_struct()
     {
         delete _p;
     }
-
+    
     void thread_struct::notify_all_at_thread_exit(std::condition_variable* cv, std::mutex* m)
     {
         _p->notify_all_at_thread_exit(cv, m);
     }
-
+    
     void thread_struct::make_ready_at_thread_exit(assoc_sub_state* s)
     {
         _p->make_ready_at_thread_exit(s);
     }
-
+    
     // thread_specific_ptr
-
+    
     thread_specific_ptr<thread_struct>& thread_local_data()
     {
         static thread_specific_ptr<thread_struct> p;
         return p;
     }
-
+    
     // thread
-
+    
     thread::~thread()
     {
         if (_t != nullptr)
@@ -148,7 +148,7 @@ namespace ps
             std::terminate();
         }
     }
-
+    
     void thread::join()
     {
         int ec = EINVAL;
@@ -160,13 +160,13 @@ namespace ps
                 _t = nullptr;
             }
         }
-
+        
         if (ec != 0)
         {
             throw_system_error(ec, "thread::join failed");
         }
     }
-
+    
     void thread::detach()
     {
         int ec = EINVAL;
@@ -178,13 +178,13 @@ namespace ps
                 _t = nullptr;
             }
         }
-
+        
         if (ec != 0)
         {
             throw_system_error(ec, "thread::detach failed");
         }
     }
-
+    
     unsigned thread::hardware_concurrency() noexcept
     {
         unsigned n;
@@ -193,7 +193,7 @@ namespace ps
         sysctl(mib, 2, &n, &s, nullptr, 0);
         return n;
     }
-
+    
     namespace this_thread
     {
         void sleep_for(const std::chrono::nanoseconds& ns)
@@ -204,7 +204,7 @@ namespace ps
                 timespec ts{};
                 using ts_sec = decltype(ts.tv_sec);
                 constexpr ts_sec ts_sec_max = std::numeric_limits<ts_sec>::max();
-
+                
                 if (s.count() < ts_sec_max)
                 {
                     ts.tv_sec = static_cast<ts_sec>(s.count());
@@ -215,12 +215,12 @@ namespace ps
                     ts.tv_sec = ts_sec_max;
                     ts.tv_nsec = 999999999; // (10^9 - 1)
                 }
-
+                
                 while (nanosleep(&ts, &ts) == -1 && errno == EINTR)
                 {
                 }
             }
         }
     } // namespace this_thread
-
+    
 } // namespace ps

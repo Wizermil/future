@@ -34,13 +34,13 @@
 
 namespace ps
 {
-
+    
     [[noreturn]] void throw_system_error(int ev, const char* what_arg);
-
+    
     class __attribute__((__visibility__("hidden"))) do_message : public std::error_category
     {
     public:
         std::string message(int ev) const override;
     };
-
+    
 } // namespace ps

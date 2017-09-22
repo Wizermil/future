@@ -36,5 +36,5 @@ namespace ps
     shared_count::~shared_count()
     {
     }
-
+    
 } // namespace ps

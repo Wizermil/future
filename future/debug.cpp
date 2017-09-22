@@ -35,7 +35,7 @@
 
 namespace ps
 {
-
+    
     static std::string make_what_str(const libcpp_debug_info& info)
     {
         std::string msg = info.file;
@@ -45,13 +45,13 @@ namespace ps
         msg += info.msg;
         return msg;
     }
-
+    
     __attribute__((__require_constant_initialization__)) libcpp_debug_function_type libcpp_debug_function = libcpp_abort_debug_function;
-
+    
     [[noreturn]] void libcpp_abort_debug_function(const libcpp_debug_info& info)
     {
         std::fputs((make_what_str(info)+'\n').c_str(), stderr);
         std::abort();
     }
-
+    
 } // namespace ps

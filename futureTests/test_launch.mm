@@ -56,7 +56,7 @@
     XCTAssertEqual(ret, ps::launch::deferred);
     ret |= ps::launch::deferred;
     XCTAssertEqual(ret, ps::launch::deferred);
-
+    
     auto ret1 = ps::launch::async | ps::launch::deferred;
     XCTAssertEqual(ret1, ps::launch::any);
 }

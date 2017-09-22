@@ -46,7 +46,7 @@
     XCTAssertFalse(f1.is_ready());
     p1.set_value(42);
     XCTAssertTrue(f1.is_ready());
-
+    
     ps::promise<int> p2;
     ps::shared_future<int> f2 = p2.get_future().share();
     XCTAssertFalse(f2.is_ready());
@@ -60,7 +60,7 @@
     XCTAssertFalse(f1.is_ready());
     p1.set_value();
     XCTAssertTrue(f1.is_ready());
-
+    
     ps::promise<void> p2;
     ps::shared_future<void> f2 = p2.get_future().share();
     XCTAssertFalse(f2.is_ready());
@@ -75,7 +75,7 @@
     int j = 42;
     p1.set_value(j);
     XCTAssertTrue(f1.is_ready());
-
+    
     ps::promise<int&> p2;
     ps::shared_future<int&> f2 = p2.get_future().share();
     XCTAssertFalse(f2.is_ready());
@@ -85,7 +85,7 @@
 
 - (void)testThreadAtExitReadyT {
     using namespace std::chrono_literals;
-
+    
     ps::promise<int> p1;
     ps::shared_future<int> f1 = p1.get_future().share();
     auto t1 = ps::thread([p = std::move(p1)]() mutable {
@@ -97,7 +97,7 @@
     if (t1.joinable())
         t1.join();
     XCTAssertTrue(f1.is_ready());
-
+    
     ps::promise<int> p2;
     ps::shared_future<int> f2 = p2.get_future().share();
     auto t2 = ps::thread([p = std::move(p2)]() mutable {
@@ -113,7 +113,7 @@
 
 - (void)testThreadAtExitReadyVoid {
     using namespace std::chrono_literals;
-
+    
     ps::promise<void> p1;
     ps::shared_future<void> f1 = p1.get_future().share();
     auto t1 = ps::thread([p = std::move(p1)]() mutable {
@@ -125,7 +125,7 @@
     if (t1.joinable())
         t1.join();
     XCTAssertTrue(f1.is_ready());
-
+    
     ps::promise<void> p2;
     ps::shared_future<void> f2 = p2.get_future().share();
     auto t2 = ps::thread([p = std::move(p2)]() mutable {
@@ -141,7 +141,7 @@
 
 - (void)testThreadAtExitReadyReference {
     using namespace std::chrono_literals;
-
+    
     int j = 42;
     ps::promise<int&> p1;
     auto f1 = p1.get_future().share();
@@ -154,7 +154,7 @@
     if (t1.joinable())
         t1.join();
     XCTAssertTrue(f1.is_ready());
-
+    
     ps::promise<int&> p2;
     auto f2 = p2.get_future().share();
     auto t2 = ps::thread([p = std::move(p2)]() mutable {
@@ -170,7 +170,7 @@
 
 - (void)testThenT {
     using namespace std::chrono_literals;
-
+    
     ps::promise<int> p1;
     auto f1 = p1.get_future().share();
     auto t1 = ps::thread([p = std::move(p1)]() mutable {
@@ -186,7 +186,7 @@
         t1.join();
     XCTAssertEqual(i, 42);
     XCTAssertEqual(res1, 7+42);
-
+    
     i = 0;
     ps::promise<int> p2;
     auto f2 = p2.get_future().share();
@@ -197,7 +197,7 @@
     }).get();
     XCTAssertEqual(i, 42);
     XCTAssertEqual(res2, 7+42);
-
+    
     std::exception_ptr e = nullptr;
     i = 0;
     ps::promise<int> p3;
@@ -213,7 +213,7 @@
     }
     XCTAssertEqual(i, 0);
     XCTAssertNotEqual(e, nullptr);
-
+    
     e = nullptr;
     i = 0;
     ps::promise<int> p4;
@@ -234,7 +234,7 @@
         t4.join();
     XCTAssertEqual(i, 0);
     XCTAssertNotEqual(e, nullptr);
-
+    
     e = nullptr;
     i = 0;
     ps::promise<int> p5;
@@ -251,7 +251,7 @@
     }
     XCTAssertEqual(i, 42);
     XCTAssertNotEqual(e, nullptr);
-
+    
     e = nullptr;
     i = 0;
     ps::promise<int> p6;
@@ -273,7 +273,7 @@
         t6.join();
     XCTAssertEqual(i, 42);
     XCTAssertNotEqual(e, nullptr);
-
+    
     e = nullptr;
     i = 0;
     ps::promise<int> p7;
@@ -290,7 +290,7 @@
         t7.join();
     XCTAssertEqual(i, 42);
     XCTAssertEqual(ret7, "742");
-
+    
     e = nullptr;
     i = 0;
     ps::promise<int> p8;
@@ -314,7 +314,7 @@
         t8.join();
     XCTAssertEqual(i, 42);
     XCTAssertEqual(ret8, "toto42");
-
+    
     e = nullptr;
     i = 0;
     ps::promise<int> p9;
@@ -342,7 +342,7 @@
         t9.join();
     XCTAssertEqual(i, 42);
     XCTAssertNotEqual(e, nullptr);
-
+    
     e = nullptr;
     i = 0;
     ps::promise<int> p10;
@@ -378,7 +378,7 @@
 
 - (void)testThreadAtExitThenT {
     using namespace std::chrono_literals;
-
+    
     ps::promise<int> p1;
     auto f1 = p1.get_future().share();
     auto t1 = ps::thread([p = std::move(p1)]() mutable {
@@ -394,7 +394,7 @@
         t1.join();
     XCTAssertEqual(i, 42);
     XCTAssertEqual(res1, 7+42);
-
+    
     std::exception_ptr e = nullptr;
     i = 0;
     ps::promise<int> p4;
@@ -415,7 +415,7 @@
         t4.join();
     XCTAssertEqual(i, 0);
     XCTAssertNotEqual(e, nullptr);
-
+    
     e = nullptr;
     i = 0;
     ps::promise<int> p6;
@@ -437,7 +437,7 @@
         t6.join();
     XCTAssertEqual(i, 42);
     XCTAssertNotEqual(e, nullptr);
-
+    
     e = nullptr;
     i = 0;
     ps::promise<int> p7;
@@ -454,7 +454,7 @@
         t7.join();
     XCTAssertEqual(i, 42);
     XCTAssertEqual(ret7, "742");
-
+    
     e = nullptr;
     i = 0;
     ps::promise<int> p8;
@@ -478,7 +478,7 @@
         t8.join();
     XCTAssertEqual(i, 42);
     XCTAssertEqual(ret8, "toto42");
-
+    
     e = nullptr;
     i = 0;
     ps::promise<int> p9;
@@ -506,7 +506,7 @@
         t9.join();
     XCTAssertEqual(i, 42);
     XCTAssertNotEqual(e, nullptr);
-
+    
     e = nullptr;
     i = 0;
     ps::promise<int> p10;
@@ -542,7 +542,7 @@
 
 - (void)testThenThenT {
     using namespace std::chrono_literals;
-
+    
     ps::promise<int> p1;
     auto f1 = p1.get_future().share();
     auto t1 = ps::thread([p = std::move(p1)]() mutable {
@@ -562,7 +562,7 @@
     XCTAssertEqual(i, 42);
     XCTAssertEqual(j, 6+42);
     XCTAssertEqual(res1, 7+6+42);
-
+    
     i = 0;
     j =0;
     ps::promise<int> p2;
@@ -578,7 +578,7 @@
     XCTAssertEqual(i, 42);
     XCTAssertEqual(j, 6+42);
     XCTAssertEqual(res2, 7+6+42);
-
+    
     std::exception_ptr e = nullptr;
     i = 0;
     j =0;
@@ -600,7 +600,7 @@
     XCTAssertEqual(i, 42);
     XCTAssertEqual(j, 0);
     XCTAssertNotEqual(e, nullptr);
-
+    
     e = nullptr;
     i = 0;
     j =0;
@@ -627,7 +627,7 @@
     XCTAssertEqual(i, 42);
     XCTAssertEqual(j, 0);
     XCTAssertNotEqual(e, nullptr);
-
+    
     e = nullptr;
     i = 0;
     j =0;
@@ -649,7 +649,7 @@
     XCTAssertEqual(i, 42);
     XCTAssertEqual(j, 6+42);
     XCTAssertNotEqual(e, nullptr);
-
+    
     e = nullptr;
     i = 0;
     j =0;
@@ -676,7 +676,7 @@
     XCTAssertEqual(i, 42);
     XCTAssertEqual(j, 6+42);
     XCTAssertNotEqual(e, nullptr);
-
+    
     e = nullptr;
     i = 0;
     std::string k;
@@ -705,7 +705,7 @@
     XCTAssertEqual(i, 42);
     XCTAssertEqual(k, "toto42");
     XCTAssertEqual(ret9, "7toto42");
-
+    
     e = nullptr;
     i = 0;
     k = "";
@@ -734,7 +734,7 @@
     } catch (...) {
         e = std::current_exception();
     }
-
+    
     if (t10.joinable())
         t10.join();
     XCTAssertEqual(i, 42);
@@ -744,7 +744,7 @@
 
 - (void)testThenVoid {
     using namespace std::chrono_literals;
-
+    
     ps::promise<void> p1;
     auto f1 = p1.get_future().share();
     auto t1 = ps::thread([p = std::move(p1)]() mutable {
@@ -759,7 +759,7 @@
     if (t1.joinable())
         t1.join();
     XCTAssertEqual(i, 7);
-
+    
     i = 0;
     ps::promise<int> p2;
     auto f2 = p2.get_future().share();
@@ -768,7 +768,7 @@
         i = f.get() + 7;
     }).get();
     XCTAssertEqual(i, 7+42);
-
+    
     std::exception_ptr e = nullptr;
     i = 0;
     ps::promise<void> p3;
@@ -784,7 +784,7 @@
     }
     XCTAssertEqual(i, 0);
     XCTAssertNotEqual(e, nullptr);
-
+    
     e = nullptr;
     i = 0;
     ps::promise<int> p4;
@@ -804,7 +804,7 @@
         t4.join();
     XCTAssertEqual(i, 0);
     XCTAssertNotEqual(e, nullptr);
-
+    
     e = nullptr;
     i = 0;
     ps::promise<void> p5;
@@ -821,7 +821,7 @@
     }
     XCTAssertEqual(i, 7);
     XCTAssertNotEqual(e, nullptr);
-
+    
     e = nullptr;
     i = 0;
     ps::promise<int> p6;
@@ -842,7 +842,7 @@
         t6.join();
     XCTAssertEqual(i, 42);
     XCTAssertNotEqual(e, nullptr);
-
+    
     e = nullptr;
     i = 0;
     ps::promise<void> p7;
@@ -860,7 +860,7 @@
         t7.join();
     XCTAssertEqual(i, 42);
     XCTAssertEqual(ret7, "742");
-
+    
     e = nullptr;
     i = 0;
     ps::promise<int> p8;
@@ -883,7 +883,7 @@
     if (t8.joinable())
         t8.join();
     XCTAssertEqual(i, 42);
-
+    
     e = nullptr;
     i = 0;
     ps::promise<int> p9;
@@ -911,7 +911,7 @@
         t9.join();
     XCTAssertEqual(i, 42);
     XCTAssertNotEqual(e, nullptr);
-
+    
     e = nullptr;
     i = 0;
     ps::promise<int> p10;
@@ -947,7 +947,7 @@
 
 - (void)testThenThenVoid {
     using namespace std::chrono_literals;
-
+    
     ps::promise<void> p1;
     auto f1 = p1.get_future().share();
     auto t1 = ps::thread([p = std::move(p1)]() mutable {
@@ -965,7 +965,7 @@
         t1.join();
     XCTAssertEqual(i, 7);
     XCTAssertEqual(j, 6+7);
-
+    
     i = 0;
     j =0;
     ps::promise<void> p2;
@@ -979,7 +979,7 @@
     }).get();
     XCTAssertEqual(i, 7);
     XCTAssertEqual(j, 6+7);
-
+    
     std::exception_ptr e = nullptr;
     i = 0;
     j =0;
@@ -1000,7 +1000,7 @@
     XCTAssertEqual(i, 7);
     XCTAssertEqual(j, 0);
     XCTAssertNotEqual(e, nullptr);
-
+    
     e = nullptr;
     i = 0;
     j =0;
@@ -1026,7 +1026,7 @@
     XCTAssertEqual(i, 7);
     XCTAssertEqual(j, 0);
     XCTAssertNotEqual(e, nullptr);
-
+    
     e = nullptr;
     i = 0;
     j =0;
@@ -1048,7 +1048,7 @@
     XCTAssertEqual(i, 7);
     XCTAssertEqual(j, 6+7);
     XCTAssertNotEqual(e, nullptr);
-
+    
     e = nullptr;
     i = 0;
     j =0;
@@ -1075,7 +1075,7 @@
     XCTAssertEqual(i, 7);
     XCTAssertEqual(j, 6+7);
     XCTAssertNotEqual(e, nullptr);
-
+    
     e = nullptr;
     i = 0;
     std::string k;
@@ -1103,7 +1103,7 @@
         t9.join();
     XCTAssertEqual(i, 7);
     XCTAssertEqual(k, "toto7");
-
+    
     e = nullptr;
     i = 0;
     k = "";
@@ -1132,7 +1132,7 @@
     } catch (...) {
         e = std::current_exception();
     }
-
+    
     if (t10.joinable())
         t10.join();
     XCTAssertEqual(i, 7);
@@ -1142,7 +1142,7 @@
 
 - (void)testThenTReference {
     using namespace std::chrono_literals;
-
+    
     ps::promise<int&> p1;
     auto f1 = p1.get_future().share();
     int j = 52;
@@ -1161,7 +1161,7 @@
     XCTAssertEqual(i, 52);
     XCTAssertEqual(j, 52);
     XCTAssertEqual(res1, 7+52);
-
+    
     i = 0;
     j = 52;
     ps::promise<int&> p2;
@@ -1175,7 +1175,7 @@
     XCTAssertEqual(i, 52);
     XCTAssertEqual(j, 52);
     XCTAssertEqual(res2, 7+52);
-
+    
     std::exception_ptr e = nullptr;
     i = 0;
     j = 52;
@@ -1193,7 +1193,7 @@
     }
     XCTAssertEqual(i, 0);
     XCTAssertNotEqual(e, nullptr);
-
+    
     e = nullptr;
     i = 0;
     j = 52;
@@ -1216,7 +1216,7 @@
         t4.join();
     XCTAssertEqual(i, 0);
     XCTAssertNotEqual(e, nullptr);
-
+    
     e = nullptr;
     i = 0;
     j = 52;
@@ -1236,7 +1236,7 @@
     XCTAssertEqual(i, 52);
     XCTAssertEqual(j, 52);
     XCTAssertNotEqual(e, nullptr);
-
+    
     e = nullptr;
     i = 0;
     j = 52;
@@ -1261,7 +1261,7 @@
     XCTAssertEqual(i, 52);
     XCTAssertEqual(j, 52);
     XCTAssertNotEqual(e, nullptr);
-
+    
     e = nullptr;
     i = 0;
     j = 52;
@@ -1281,7 +1281,7 @@
     XCTAssertEqual(i, 52);
     XCTAssertEqual(j, 52);
     XCTAssertEqual(ret7, "752");
-
+    
     e = nullptr;
     i = 0;
     j = 52;
@@ -1309,7 +1309,7 @@
     XCTAssertEqual(i, 52+7);
     XCTAssertEqual(j, 52);
     XCTAssertEqual(ret8, "toto59");
-
+    
     e = nullptr;
     i = 0;
     j = 52;
@@ -1340,7 +1340,7 @@
     XCTAssertEqual(i, 52);
     XCTAssertEqual(j, 52);
     XCTAssertNotEqual(e, nullptr);
-
+    
     e = nullptr;
     i = 0;
     j = 52;
@@ -1379,7 +1379,7 @@
 
 - (void)testWhenAllT {
     using namespace std::chrono_literals;
-
+    
     std::vector<ps::shared_future<int>> vec1;
     vec1.reserve(2);
     vec1.emplace_back(ps::async([]() {
@@ -1394,7 +1394,7 @@
     auto res1 = fut1.get();
     XCTAssertEqual(res1[0].get(), 4);
     XCTAssertEqual(res1[1].get(), 2);
-
+    
     auto fut2 = ps::when_all(ps::async([]() {
         ps::this_thread::sleep_for(10ms);
         return 4;
@@ -1411,7 +1411,7 @@
     XCTAssertEqual(std::get<0>(res2).get(), 4);
     XCTAssertEqual(std::get<1>(res2).get(), std::string("2"));
     XCTAssertEqualWithAccuracy(std::get<2>(res2).get(), 8.8f, std::numeric_limits<float>::epsilon());
-
+    
     std::exception_ptr e = nullptr;
     auto fut3 = ps::when_all(ps::async([]() {
         ps::this_thread::sleep_for(10ms);
@@ -1432,7 +1432,7 @@
         e = std::current_exception();
     }
     XCTAssertNotEqual(e, nullptr);
-
+    
     e = nullptr;
     auto fut4 = ps::when_all(ps::async([]() {
         ps::this_thread::sleep_for(10ms);
@@ -1456,7 +1456,7 @@
         e = std::current_exception();
     }
     XCTAssertNotEqual(e, nullptr);
-
+    
     e = nullptr;
     std::vector<ps::shared_future<int>> vec5;
     vec5.reserve(2);
@@ -1483,7 +1483,7 @@
 
 - (void)testWhenAllVoid {
     using namespace std::chrono_literals;
-
+    
     int i = 0, j = 0;
     std::vector<ps::shared_future<void>> vec1;
     vec1.reserve(2);
@@ -1499,7 +1499,7 @@
     auto res1 = fut1.get();
     XCTAssertEqual(i, 4);
     XCTAssertEqual(j, 2);
-
+    
     i = 0;
     std::string k = "";
     float l = 0.f;
@@ -1519,7 +1519,7 @@
     XCTAssertEqual(i, 4);
     XCTAssertEqual(k, std::string("2"));
     XCTAssertEqualWithAccuracy(l, 8.8f, std::numeric_limits<float>::epsilon());
-
+    
     i = 0;
     j = 0;
     int m = 0;
@@ -1545,7 +1545,7 @@
     XCTAssertEqual(i, 4);
     XCTAssertEqual(j, 0);
     XCTAssertEqual(m, 8);
-
+    
     e = nullptr;
     i = 0;
     k = "";
@@ -1574,7 +1574,7 @@
     XCTAssertEqual(i, 4);
     XCTAssertEqual(k, std::string(""));
     XCTAssertEqualWithAccuracy(l, 8.8f, std::numeric_limits<float>::epsilon());
-
+    
     e = nullptr;
     i = 0;
     j = 0;

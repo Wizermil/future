@@ -42,7 +42,7 @@
 
 - (void)testNew {
     ps::assoc_sub_state a;
-
+    
     XCTAssertFalse(a.has_value());
     XCTAssertFalse(a.has_future_attached());
     XCTAssertFalse(a.is_ready());
@@ -68,7 +68,7 @@
     XCTAssertThrows(a.set_value_at_thread_exit());
     XCTAssertThrows(a.set_exception(std::make_exception_ptr(std::logic_error("logic_error"))));
     XCTAssertThrows(a.set_exception_at_thread_exit(std::make_exception_ptr(std::logic_error("logic_error"))));
-
+    
     ps::assoc_sub_state b;
     b.set_exception(std::make_exception_ptr(std::logic_error("logic_error")));
     XCTAssertTrue(b.is_ready());
@@ -80,24 +80,24 @@
 
 - (void)testWait {
     using namespace std::chrono_literals;
-
+    
     constexpr auto dur = 5ms;
     constexpr auto upper_dur = dur + 2ms;
-
+    
     ps::assoc_sub_state a;
     auto now = std::chrono::high_resolution_clock::now();
     a.wait_for(dur);
     auto res = (std::chrono::high_resolution_clock::now() - now);
     XCTAssertGreaterThan(res, dur);
     XCTAssertLessThan(res, upper_dur);
-
+    
     ps::assoc_sub_state b;
     now = std::chrono::high_resolution_clock::now();
     a.wait_until(now + dur);
     res = (std::chrono::high_resolution_clock::now() - now);
     XCTAssertGreaterThan(res, dur);
     XCTAssertLessThan(res, upper_dur);
-
+    
     ps::assoc_sub_state c;
     auto tc = ps::thread([&c, &dur]() {
         std::this_thread::sleep_for(dur);
@@ -110,7 +110,7 @@
     XCTAssertLessThan(res, upper_dur);
     if (tc.joinable())
         tc.join();
-
+    
     ps::assoc_sub_state d;
     auto td = ps::thread([&d, &dur]() {
         std::this_thread::sleep_for(dur);
@@ -123,7 +123,7 @@
     XCTAssertLessThan(res, upper_dur);
     if (td.joinable())
         td.join();
-
+    
     ps::assoc_sub_state e;
     auto te = ps::thread([&e, &dur]() {
         std::this_thread::sleep_for(dur);
@@ -150,7 +150,7 @@
     XCTAssertEqual(a.use_count(), 2);
     a.release_shared();
     XCTAssertEqual(a.use_count(), 1);
-
+    
     ps::assoc_sub_state* b = new ps::assoc_sub_state();
     b->release_shared();
 }
@@ -163,7 +163,7 @@
         i = e;
     });
     XCTAssertEqual(i, nullptr);
-
+    
     i = nullptr;
     ps::assoc_sub_state b;
     b.set_value();
@@ -171,7 +171,7 @@
         i = e;
     });
     XCTAssertEqual(i, nullptr);
-
+    
     i = nullptr;
     ps::assoc_sub_state c;
     c.set_exception(std::make_exception_ptr(std::logic_error("logic_error")));

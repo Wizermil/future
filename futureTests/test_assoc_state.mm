@@ -38,35 +38,35 @@
 @implementation test_assoc_state
 
 - (void)testNew {
-
+    
     ps::assoc_state<int> a;
     a.set_value(42);
     XCTAssertEqual(a.copy(), 42);
     XCTAssertEqual(a.move(), 42);
-
+    
     ps::assoc_state<int>* b = new ps::assoc_state<int>();
     b->set_value(42);
     XCTAssertEqual(b->copy(), 42);
     XCTAssertEqual(b->move(), 42);
     delete b;
-
+    
     ps::assoc_state<std::string> c;
     c.set_value("toto");
     XCTAssertEqual(c.copy(), "toto");
     XCTAssertEqual(c.move(), "toto");
-
+    
     ps::assoc_state<std::string>* d = new ps::assoc_state<std::string>();
     d->set_value("toto");
     XCTAssertEqual(d->copy(), "toto");
     XCTAssertEqual(d->move(), "toto");
     delete d;
-
+    
     ps::assoc_state<std::string>* e = new ps::assoc_state<std::string>();
     e->set_value("totototototototototototototototototototototototototototototototo");
     XCTAssertEqual(e->copy(), "totototototototototototototototototototototototototototototototo");
     XCTAssertEqual(e->move(), "totototototototototototototototototototototototototototototototo");
     delete e;
-
+    
     struct foo
     {
         int a1;
@@ -75,13 +75,13 @@
     ps::assoc_state<foo> f;
     foo ff {42, "totototototototototototototototototototototototototototototototo"};
     f.set_value(std::move(ff));
-
+    
     XCTAssertEqual(f.copy().a1, 42);
     XCTAssertEqual(f.copy().a2, "totototototototototototototototototototototototototototototototo");
     foo ffm = f.move();
     XCTAssertEqual(ffm.a1, 42);
     XCTAssertEqual(ffm.a2, "totototototototototototototototototototototototototototototototo");
-
+    
 }
 
 @end
