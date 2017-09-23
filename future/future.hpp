@@ -2028,7 +2028,6 @@ namespace ps
     
     inline bool does_policy_contain(launch policy, launch value)
     {
-        using launch_underlying_type = std::underlying_type<launch>::type;
         return (static_cast<launch_underlying_type>(policy) & static_cast<launch_underlying_type>(value)) != 0;
     }
     
