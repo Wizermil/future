@@ -27,7 +27,8 @@
 // SOFTWARE.
 //
 
-#pragma once
+#ifndef FUTURE_MEMORY_HPP
+#define FUTURE_MEMORY_HPP
 
 #include "tuple.hpp"
 #include "type_traits.hpp"
@@ -294,3 +295,5 @@ namespace ps
     }
     
 } // namespace ps
+
+#endif // FUTURE_MEMORY_HPP

@@ -27,7 +27,8 @@
 // SOFTWARE.
 //
 
-#pragma once
+#ifndef FUTURE_DEBUG_HPP
+#define FUTURE_DEBUG_HPP
 
 #include <type_traits>
 
@@ -60,3 +61,5 @@ namespace ps
     extern libcpp_debug_function_type libcpp_debug_function;
 
 } // namespace ps
+
+#endif // FUTURE_DEBUG_HPP

@@ -27,7 +27,8 @@
 // SOFTWARE.
 //
 
-#pragma once
+#ifndef FUTURE_TYPE_TRAITS_HPP
+#define FUTURE_TYPE_TRAITS_HPP
 
 #include <functional>
 #include <type_traits>
@@ -345,3 +346,5 @@ noexcept(noexcept(__VA_ARGS__)) -> decltype(__VA_ARGS__) \
     using invoke_of_t = typename invoke_of<F, Args...>::type;
     
 } // namespace ps
+
+#endif // FUTURE_TYPE_TRAITS_HPP

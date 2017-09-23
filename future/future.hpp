@@ -27,7 +27,8 @@
 // SOFTWARE.
 //
 
-#pragma once
+#ifndef FUTURE_FUTURE_HPP
+#define FUTURE_FUTURE_HPP
 
 #include "memory.hpp"
 #include "thread.hpp"
@@ -42,7 +43,6 @@
 #include <mutex>
 #include <stdexcept>
 #include <system_error>
-#include <thread>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -2753,3 +2753,5 @@ namespace std
     };
     
 } // namespace std
+
+#endif // FUTURE_FUTURE_HPP

@@ -27,7 +27,8 @@
 // SOFTWARE.
 //
 
-#pragma once
+#ifndef FUTURE_THREAD_HPP
+#define FUTURE_THREAD_HPP
 
 #include "debug.hpp"
 #include "system_error.hpp"
@@ -40,7 +41,6 @@
 #include <mutex>
 #include <ostream>
 #include <pthread.h>
-#include <thread>
 #include <tuple>
 #include <type_traits>
 
@@ -355,3 +355,5 @@ namespace std
         }
     };
 } // namespace std
+
+#endif // FUTURE_THREAD_HPP

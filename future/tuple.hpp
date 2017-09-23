@@ -27,7 +27,8 @@
 // SOFTWARE.
 //
 
-#pragma once
+#ifndef FUTURE_TUPLE_HPP
+#define FUTURE_TUPLE_HPP
 
 #include <cstddef>
 #include <tuple>
@@ -88,3 +89,5 @@ namespace ps
     };
     
 } // namespace ps
+
+#endif // FUTURE_TUPLE_HPP

@@ -32,7 +32,6 @@
 #include <exception>
 #include <stdexcept>
 #include <chrono>
-#include <thread>
 
 @interface test_assoc_sub_state : XCTestCase
 
@@ -100,7 +99,7 @@
     
     ps::assoc_sub_state c;
     auto tc = ps::thread([&c, &dur]() {
-        std::this_thread::sleep_for(dur);
+        ps::this_thread::sleep_for(dur);
         c.make_ready();
     });
     now = std::chrono::high_resolution_clock::now();
@@ -113,7 +112,7 @@
     
     ps::assoc_sub_state d;
     auto td = ps::thread([&d, &dur]() {
-        std::this_thread::sleep_for(dur);
+        ps::this_thread::sleep_for(dur);
         d.set_value();
     });
     now = std::chrono::high_resolution_clock::now();
@@ -126,7 +125,7 @@
     
     ps::assoc_sub_state e;
     auto te = ps::thread([&e, &dur]() {
-        std::this_thread::sleep_for(dur);
+        ps::this_thread::sleep_for(dur);
         e.set_exception(std::make_exception_ptr(std::logic_error("logic_error")));
     });
     now = std::chrono::high_resolution_clock::now();

@@ -27,7 +27,8 @@
 // SOFTWARE.
 //
 
-#pragma once
+#ifndef FUTURE_SYSTEM_ERROR_HPP
+#define FUTURE_SYSTEM_ERROR_HPP
 
 #include <string>
 #include <system_error>
@@ -44,3 +45,5 @@ namespace ps
     };
     
 } // namespace ps
+
+#endif // FUTURE_SYSTEM_ERROR_HPP
