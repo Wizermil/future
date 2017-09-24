@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ROOT=$(realpath "$(dirname "$0")")
-WORKER=1
+WORKER=8
 
 error() {
   echo "$@" 1>&2
@@ -17,20 +17,18 @@ find_clang() {
         echo "/usr/local/opt/llvm/bin/clang"
     elif hash which 2>/dev/null; then
         which clang
-    fi
-}
-
-find_linker() {
-    if [ -f "/usr/local/opt/llvm/bin/clang" ]; then
-        echo "/usr/local/opt/llvm/bin/clang"
-    elif hash which 2>/dev/null; then
-        which clang
+    else
+        fail "clang not found"
     fi
 }
 
 find_libtool() {
     if hash which 2>/dev/null; then
-        which libtool
+        if hash libtool 2>/dev/null; then
+            which libtool
+        else
+            fail "libtool not found"
+        fi
     fi
 }
 
@@ -70,7 +68,7 @@ libtool_c++() {
             objects+="$filename_obj "
         fi
     done
-
+    
     eval "$LIBTOOL -static -o $ROOT/$2.a $objects"
 }
 
@@ -78,22 +76,14 @@ if [ -z "${CXX+x}" ]; then
     CXX=$(find_clang)
 fi
 
-if [ -z "${LD+x}" ]; then
-    LD=$(find_linker)
-fi
-
 if [ -z "${LIBTOOL+x}" ]; then
     LIBTOOL=$(find_libtool)
 fi
 
 if [ -z "${CXXFLAGS+x}" ]; then
-    CXXFLAGS="-Og -g -fno-omit-frame-pointer -std=c++1z -march=native "
-    #CXXFLAGS="-Ofast -flto=thin -std=c++1z -march=native "
+    #CXXFLAGS="-O0 -g -fno-omit-frame-pointer -std=c++1z -march=native "
+    CXXFLAGS="-Ofast -std=c++1z -march=native "
     CXXFLAGS+="-Weverything -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-c++11-compat -Wno-c++11-compat-pedantic -Wno-c++14-compat -Wno-c++14-compat-pedantic -Wno-padded"
-fi
-if [ -z "${LDFLAGS+x}" ]; then
-    LDFLAGS="-l c++ -L/usr/local/opt/llvm/lib -Wl,-rpath,/usr/local/opt/llvm/lib"
-    #LDFLAGS="-flto=thin -l c++ -L/usr/local/opt/llvm/lib -Wl,-rpath,/usr/local/opt/llvm/lib"
 fi
 
 build_future() {
@@ -126,8 +116,8 @@ clean_future() {
 }
 
 clean() {
-    if [ -f "$ROOT/.hammer/obj" ]; then
-        rm -rf "$ROOT/.hammer/obj"
+    if [ -d "$ROOT/.tmp/obj" ]; then
+        rm -rf "$ROOT/.tmp/obj"
     fi
     clean_future
 }
