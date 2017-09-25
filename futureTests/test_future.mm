@@ -1471,6 +1471,28 @@
     XCTAssertGreaterThan(res, 6ms);
     XCTAssertLessThan(res, 6ms+dur_epsilon);
     XCTAssertEqual(tid70, tid71);
+
+    now = std::chrono::high_resolution_clock::now();
+    ps::thread_id tid80;
+    auto fut80 = ps::async(ps::launch::thread_pool, [&tid80]() {
+        ps::this_thread::sleep_for(4ms);
+        tid80 = ps::this_thread::get_id();
+        return 4;
+    });
+    ps::thread_id tid81;
+    auto fut81 = ps::async(ps::launch::queued, [&tid81]() {
+        ps::this_thread::sleep_for(2ms);
+        tid81 = ps::this_thread::get_id();
+        return "2";
+    });
+    XCTAssertFalse(fut80.is_ready());
+    XCTAssertFalse(fut81.is_ready());
+    XCTAssertEqual(fut80.get(), 4);
+    XCTAssertEqual(fut81.get(), std::string("2"));
+    res = (std::chrono::high_resolution_clock::now() - now);
+    XCTAssertGreaterThan(res, 4ms);
+    XCTAssertLessThan(res, 4ms+dur_epsilon);
+    XCTAssertNotEqual(tid80, tid81);
 }
 
 - (void)testAsyncVoid {

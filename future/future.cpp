@@ -387,7 +387,9 @@ namespace ps
             _cond.notify_all();
         }
         if (_thread.joinable())
+        {
             _thread.join();
+        }
     }
 
     void async_queued::start()
@@ -400,7 +402,9 @@ namespace ps
                     return _stop || !_tasks.empty();
                 });
                 if (_stop)
+                {
                     break;
+                }
                 while (!_tasks.empty())
                 {
                     auto state = _tasks.front();
@@ -413,5 +417,130 @@ namespace ps
         });
     }
 
+    // async_thread_pool
+
+    async_thread_pool& get_async_thread_pool()
+    {
+        static async_thread_pool queue;
+        return queue;
+    }
+
+    async_thread_worker::async_thread_worker()
+    {
+        _thread = ps::thread([this] {
+            std::unique_lock<std::mutex> lock(_m);
+            while (!_stop)
+            {
+                _start_cond.wait(lock, [this] {
+                    return _task != nullptr || _stop;
+                });
+                if (_stop)
+                    break;
+                lock.unlock();
+                _task->execute();
+                lock.lock();
+                _task = nullptr;
+                _has_task = false;
+                ps::invoke(_completion_cb);
+            }
+        });
+    }
+
+    async_thread_worker::~async_thread_worker()
+    {
+        stop();
+    }
+
+    void async_thread_worker::stop()
+    {
+        {
+            std::lock_guard<std::mutex> lock(_m);
+            _stop = true;
+            _start_cond.notify_all();
+        }
+        if (_thread.joinable())
+        {
+            _thread.join();
+        }
+    }
+
+    void async_thread_worker::post(assoc_sub_state* task, const std::function<void()>& completion_cb)
+    {
+        std::unique_lock<std::mutex> lock(_m);
+        if (_task != nullptr)
+        {
+            throw std::logic_error("Worker already has a pending task");
+        }
+        start_task(task, completion_cb);
+    }
+
+    void async_thread_worker::start_task(assoc_sub_state* task, const std::function<void()>& completion_cb)
+    {
+        _has_task = true;
+        _task = task;
+        _completion_cb = completion_cb;
+        _start_cond.notify_one();
+    }
+
+    async_thread_pool::async_thread_pool() : _tp(ps::thread::hardware_concurrency())
+    , _available_count(ps::thread::hardware_concurrency())
+    {
+        _manager_thread = ps::thread([this] {
+            std::unique_lock<std::mutex> lock(_mutex);
+            while (!_stop)
+            {
+                _cond.wait(lock, [this] {
+                    return _stop || (!_task_queue.empty() && _available_count > 0);
+                });
+                while (!_task_queue.empty() && _available_count > 0)
+                {
+                    if (_stop)
+                    {
+                        break;
+                    }
+                    auto ready_it = std::find_if(_tp.begin(), _tp.end(), [](const async_thread_worker& worker) {
+                        return worker.available();
+                    });
+                    if (ready_it == _tp.end())
+                    {
+                        break;
+                    }
+                    auto task = _task_queue.front();
+                    _task_queue.pop();
+                    --_available_count;
+                    ready_it->post(task, [this] {
+                        ++_available_count;
+                        _cond.notify_one();
+                    });
+                }
+            }
+        });
+    }
+
+    async_thread_pool::~async_thread_pool()
+    {
+        {
+            std::lock_guard<std::mutex> lock(_mutex);
+            _stop = true;
+            _cond.notify_all();
+        }
+        if (_manager_thread.joinable())
+        {
+            _manager_thread.join();
+        }
+        for (auto& worker : _tp)
+        {
+            worker.stop();
+        }
+    }
+
+    void async_thread_pool::post(assoc_sub_state* task)
+    {
+        {
+            std::unique_lock<std::mutex> lock(_mutex);
+            _task_queue.push(task);
+        }
+        _cond.notify_one();
+    }
 
 } // namespace ps

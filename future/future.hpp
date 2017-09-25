@@ -65,7 +65,8 @@ namespace ps
         async = 1,
         deferred = 2,
         any = async | deferred,
-        queued = 4
+        queued = 4,
+        thread_pool = 8,
     };
     using launch_underlying_type = std::underlying_type<launch>::type;
     inline constexpr launch operator&(launch x, launch y)
@@ -82,7 +83,7 @@ namespace ps
     }
     inline constexpr launch operator~(launch x)
     {
-        return static_cast<launch>(~static_cast<launch_underlying_type>(x) & 7);
+        return static_cast<launch>(~static_cast<launch_underlying_type>(x) & 15);
     }
     inline launch& operator&=(launch& x, launch y)
     {
@@ -463,7 +464,8 @@ namespace ps
             ready = 4,
             deferred = 8,
             queued = 16,
-            continuation_attached = 32,
+            thread_pool = 32,
+            continuation_attached = 64,
         };
         
         inline assoc_sub_state() : _status(0)
@@ -494,6 +496,11 @@ namespace ps
         inline void set_queued()
         {
             _status |= queued;
+        }
+
+        inline void set_thread_pool()
+        {
+            _status |= thread_pool;
         }
         
         void make_ready();
@@ -1003,6 +1010,58 @@ namespace ps
     private:
         void start();
     };
+
+    // thread_pool_assoc_state
+
+    class async_thread_worker
+    {
+        ps::thread _thread;
+        mutable std::mutex _m;
+        bool _stop {false};
+        bool _has_task {false};
+        std::condition_variable _start_cond;
+        assoc_sub_state* _task {nullptr};
+        std::function<void()> _completion_cb {nullptr};
+    public:
+        async_thread_worker();
+        ~async_thread_worker();
+
+        void stop();
+
+        inline bool available() const
+        {
+            return !_has_task;
+        }
+
+        void post(assoc_sub_state* task, const std::function<void()>& completion_cb);
+
+    private:
+        void start_task(assoc_sub_state* task, const std::function<void()>& completion_cb);
+    };
+
+    class async_thread_pool
+    {
+        using tp_type = std::vector<async_thread_worker>;
+
+        tp_type _tp;
+        std::mutex _mutex;
+        std::queue<assoc_sub_state*> _task_queue;
+        ps::thread _manager_thread;
+        bool _stop {false};
+        std::size_t _available_count;
+        std::condition_variable _cond;
+
+    public:
+        async_thread_pool();
+        ~async_thread_pool();
+
+        inline std::size_t available() const
+        {
+            return _available_count;
+        }
+
+        void post(assoc_sub_state* task);
+    };
     
     // future<T>
     
@@ -1015,6 +1074,8 @@ namespace ps
     future<T> make_async_assoc_state(F&& f);
     template<class T, class F>
     future<T> make_queued_assoc_state(F&& f);
+    template<class T, class F>
+    future<T> make_thread_pool_assoc_state(F&& f);
     template<class T>
     std::conditional_t<is_reference_wrapper<std::decay_t<T>>::value, future<std::decay_t<T>&>, future<std::decay_t<T>>> make_ready_future(T&& value);
     
@@ -1036,6 +1097,8 @@ namespace ps
         friend future<R> make_async_assoc_state(F&& f);
         template<class R, class F>
         friend future<R> make_queued_assoc_state(F&& f);
+        template<class R, class F>
+        friend future<R> make_thread_pool_assoc_state(F&& f);
         template<typename InputIt>
         friend auto when_all(InputIt first, InputIt last) -> future<std::vector<typename std::iterator_traits<InputIt>::value_type>>;
         template<std::size_t I, typename Context, typename Future>
@@ -1169,6 +1232,8 @@ namespace ps
         friend future<R> make_async_assoc_state(F&& f);
         template<class R, class F>
         friend future<R> make_queued_assoc_state(F&& f);
+        template<class R, class F>
+        friend future<R> make_thread_pool_assoc_state(F&& f);
         template<typename InputIt>
         friend auto when_all(InputIt first, InputIt last) -> future<std::vector<typename std::iterator_traits<InputIt>::value_type>>;
         template<std::size_t I, typename Context, typename Future>
@@ -1302,6 +1367,8 @@ namespace ps
         friend future<R> make_async_assoc_state(F&& f);
         template<class R, class F>
         friend future<R> make_queued_assoc_state(F&& f);
+        template<class R, class F>
+        friend future<R> make_thread_pool_assoc_state(F&& f);
         template<typename InputIt>
         friend auto when_all(InputIt first, InputIt last) -> future<std::vector<typename std::iterator_traits<InputIt>::value_type>>;
         template<std::size_t I, typename Context, typename Future>
@@ -2026,6 +2093,18 @@ namespace ps
         queue.post(h.get());
         return future<T>(h.get());
     }
+
+    async_thread_pool& get_async_thread_pool();
+
+    template<class T, class F>
+    future<T> make_thread_pool_assoc_state(F&& f)
+    {
+        auto& queue = get_async_thread_pool();
+        std::unique_ptr<async_assoc_state<T, F>, release_shared_count> h(new async_assoc_state<T, F>(std::forward<F>(f)));
+        h->set_thread_pool();
+        queue.post(h.get());
+        return future<T>(h.get());
+    }
     
     template<class F, class... Args>
     using future_async_ret_t = invoke_of_t<std::decay_t<F>, std::decay_t<Args>...>;
@@ -2089,6 +2168,10 @@ namespace ps
         if (does_policy_contain(policy, launch::queued))
         {
             return make_queued_assoc_state<R>(BF(decay_copy(std::forward<F>(f)), decay_copy(std::forward<Args>(args))...));
+        }
+        else if (does_policy_contain(policy, launch::thread_pool))
+        {
+            return make_thread_pool_assoc_state<R>(BF(decay_copy(std::forward<F>(f)), decay_copy(std::forward<Args>(args))...));
         }
         
         try
@@ -2396,7 +2479,7 @@ namespace ps
         struct context_any
         {
             size_t total = 0;
-            std::size_t processed = 0;
+            std::atomic<std::size_t> processed = 0;
             std::size_t failled = 0;
             future_inner_type result;
             promise<future_inner_type> p;
