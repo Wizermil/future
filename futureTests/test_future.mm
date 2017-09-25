@@ -1389,7 +1389,7 @@
 
 - (void)testAsyncT {
     using namespace std::chrono_literals;
-    constexpr auto dur_epsilon = 3ms;
+    constexpr auto dur_epsilon = 4ms;
     
     auto fut1 = ps::async(ps::launch::async, [](int a) {
         ps::this_thread::sleep_for(5ms);
