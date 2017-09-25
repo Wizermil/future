@@ -353,5 +353,65 @@ namespace ps
     {
         return _state->then(std::move(continuation));
     }
-    
+
+    // async_queued
+
+    async_queued& get_async_queued()
+    {
+        static async_queued queue;
+        return queue;
+    }
+
+    async_queued::async_queued() : _stop(false)
+    {
+        start();
+    }
+
+    async_queued::~async_queued()
+    {
+        stop();
+    }
+
+    void async_queued::post(assoc_sub_state* state)
+    {
+        std::lock_guard<std::mutex> lock(_mutex);
+        _tasks.push(state);
+        _cond.notify_all();
+    }
+
+    void async_queued::stop()
+    {
+        {
+            std::lock_guard<std::mutex> _lock(_mutex);
+            _stop = true;
+            _cond.notify_all();
+        }
+        if (_thread.joinable())
+            _thread.join();
+    }
+
+    void async_queued::start()
+    {
+        _thread = ps::thread([this] {
+            std::unique_lock<std::mutex> lock(_mutex);
+            while (!_stop)
+            {
+                _cond.wait(lock, [this]() {
+                    return _stop || !_tasks.empty();
+                });
+                if (_stop)
+                    break;
+                while (!_tasks.empty())
+                {
+                    auto state = _tasks.front();
+                    _tasks.pop();
+                    lock.unlock();
+                    state->execute();
+                    lock.lock();
+                }
+            }
+        });
+    }
+
+
 } // namespace ps

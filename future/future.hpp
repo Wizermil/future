@@ -41,6 +41,7 @@
 #include <iterator>
 #include <memory>
 #include <mutex>
+#include <queue>
 #include <stdexcept>
 #include <system_error>
 #include <tuple>
@@ -63,7 +64,8 @@ namespace ps
     {
         async = 1,
         deferred = 2,
-        any = async | deferred
+        any = async | deferred,
+        queued = 4
     };
     using launch_underlying_type = std::underlying_type<launch>::type;
     inline constexpr launch operator&(launch x, launch y)
@@ -80,7 +82,7 @@ namespace ps
     }
     inline constexpr launch operator~(launch x)
     {
-        return static_cast<launch>(~static_cast<launch_underlying_type>(x) & 3);
+        return static_cast<launch>(~static_cast<launch_underlying_type>(x) & 7);
     }
     inline launch& operator&=(launch& x, launch y)
     {
@@ -460,7 +462,8 @@ namespace ps
             future_attached = 2,
             ready = 4,
             deferred = 8,
-            continuation_attached = 16,
+            queued = 16,
+            continuation_attached = 32,
         };
         
         inline assoc_sub_state() : _status(0)
@@ -486,6 +489,11 @@ namespace ps
         inline void set_deferred()
         {
             _status |= deferred;
+        }
+
+        inline void set_queued()
+        {
+            _status |= queued;
         }
         
         void make_ready();
@@ -550,7 +558,7 @@ namespace ps
         using R = typename future_held<future_then_ret_t<T, F, Arg>>::type;
         promise<R> prom;
         auto ret = prom.get_future();
-        then([&future, p = std::move(prom), f = decay_copy(func)](const std::exception_ptr& exception) mutable {
+        then([this, &future, p = std::move(prom), f = decay_copy(func)](const std::exception_ptr& exception) mutable {
             if (exception != nullptr)
             {
                 p.set_exception(exception);
@@ -854,7 +862,7 @@ namespace ps
             this->set_deferred();
         }
         
-        virtual void execute();
+        void execute() override;
     };
     
     template<class T, class F>
@@ -909,13 +917,13 @@ namespace ps
         
         F _func;
         
-        virtual void on_zero_shared() noexcept;
+        void on_zero_shared() noexcept override;
     public:
         inline explicit async_assoc_state(F&& f) : _func(std::forward<F>(f))
         {
         }
         
-        virtual void execute();
+        void execute() override;
     };
     
     template<class T, class F>
@@ -974,6 +982,27 @@ namespace ps
         wait();
         base::on_zero_shared();
     }
+
+    // queued_assoc_state
+
+    class async_queued
+    {
+        std::queue<assoc_sub_state*> _tasks;
+        std::mutex _mutex;
+        std::condition_variable _cond;
+        ps::thread _thread;
+        bool _stop;
+    public:
+        async_queued();
+        ~async_queued();
+
+        void post(assoc_sub_state* state);
+
+        void stop();
+
+    private:
+        void start();
+    };
     
     // future<T>
     
@@ -984,6 +1013,8 @@ namespace ps
     future<T> make_deferred_assoc_state(F&& f);
     template<class T, class F>
     future<T> make_async_assoc_state(F&& f);
+    template<class T, class F>
+    future<T> make_queued_assoc_state(F&& f);
     template<class T>
     std::conditional_t<is_reference_wrapper<std::decay_t<T>>::value, future<std::decay_t<T>&>, future<std::decay_t<T>>> make_ready_future(T&& value);
     
@@ -1003,6 +1034,8 @@ namespace ps
         friend future<R> make_deferred_assoc_state(F&& f);
         template<class R, class F>
         friend future<R> make_async_assoc_state(F&& f);
+        template<class R, class F>
+        friend future<R> make_queued_assoc_state(F&& f);
         template<typename InputIt>
         friend auto when_all(InputIt first, InputIt last) -> future<std::vector<typename std::iterator_traits<InputIt>::value_type>>;
         template<std::size_t I, typename Context, typename Future>
@@ -1134,6 +1167,8 @@ namespace ps
         friend future<R> make_deferred_assoc_state(F&& f);
         template<class R, class F>
         friend future<R> make_async_assoc_state(F&& f);
+        template<class R, class F>
+        friend future<R> make_queued_assoc_state(F&& f);
         template<typename InputIt>
         friend auto when_all(InputIt first, InputIt last) -> future<std::vector<typename std::iterator_traits<InputIt>::value_type>>;
         template<std::size_t I, typename Context, typename Future>
@@ -1265,6 +1300,8 @@ namespace ps
         friend future<R> make_deferred_assoc_state(F&& f);
         template<class R, class F>
         friend future<R> make_async_assoc_state(F&& f);
+        template<class R, class F>
+        friend future<R> make_queued_assoc_state(F&& f);
         template<typename InputIt>
         friend auto when_all(InputIt first, InputIt last) -> future<std::vector<typename std::iterator_traits<InputIt>::value_type>>;
         template<std::size_t I, typename Context, typename Future>
@@ -1977,6 +2014,18 @@ namespace ps
         ps::thread(&async_assoc_state<T, F>::execute, h.get()).detach();
         return future<T>(h.get());
     }
+
+    async_queued& get_async_queued();
+
+    template<class T, class F>
+    future<T> make_queued_assoc_state(F&& f)
+    {
+        auto& queue = get_async_queued();
+        std::unique_ptr<async_assoc_state<T, F>, release_shared_count> h(new async_assoc_state<T, F>(std::forward<F>(f)));
+        h->set_queued();
+        queue.post(h.get());
+        return future<T>(h.get());
+    }
     
     template<class F, class... Args>
     using future_async_ret_t = invoke_of_t<std::decay_t<F>, std::decay_t<Args>...>;
@@ -2036,6 +2085,11 @@ namespace ps
     {
         using R = typename future_held<future_async_ret_t<F, Args...>>::type;
         using BF = async_func<R, std::decay_t<F>, std::decay_t<Args>...>;
+
+        if (does_policy_contain(policy, launch::queued))
+        {
+            return make_queued_assoc_state<R>(BF(decay_copy(std::forward<F>(f)), decay_copy(std::forward<Args>(args))...));
+        }
         
         try
         {

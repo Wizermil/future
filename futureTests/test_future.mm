@@ -1389,6 +1389,7 @@
 
 - (void)testAsyncT {
     using namespace std::chrono_literals;
+    constexpr auto dur_epsilon = 3ms;
     
     auto fut1 = ps::async(ps::launch::async, [](int a) {
         ps::this_thread::sleep_for(5ms);
@@ -1448,6 +1449,28 @@
     }, "54", 42, 7.f);
     XCTAssertFalse(fut6.is_ready());
     XCTAssertEqual(fut6.get(), "54");
+
+    auto now = std::chrono::high_resolution_clock::now();
+    ps::thread_id tid70;
+    auto fut70 = ps::async(ps::launch::queued, [&tid70]() {
+        ps::this_thread::sleep_for(4ms);
+        tid70 = ps::this_thread::get_id();
+        return 4;
+    });
+    ps::thread_id tid71;
+    auto fut71 = ps::async(ps::launch::queued, [&tid71]() {
+        ps::this_thread::sleep_for(2ms);
+        tid71 = ps::this_thread::get_id();
+        return "2";
+    });
+    XCTAssertFalse(fut70.is_ready());
+    XCTAssertFalse(fut71.is_ready());
+    XCTAssertEqual(fut70.get(), 4);
+    XCTAssertEqual(fut71.get(), std::string("2"));
+    auto res = (std::chrono::high_resolution_clock::now() - now);
+    XCTAssertGreaterThan(res, 6ms);
+    XCTAssertLessThan(res, 6ms+dur_epsilon);
+    XCTAssertEqual(tid70, tid71);
 }
 
 - (void)testAsyncVoid {
