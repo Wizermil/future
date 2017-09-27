@@ -670,8 +670,11 @@ namespace ps
         }
         new (&_value) T(std::forward<Arg>(arg));
         _status |= base::constructed;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wundefined-func-template"
         ASSERT(thread_local_data().get() != nullptr, "");
         thread_local_data()->make_ready_at_thread_exit(this);
+#pragma clang diagnostic pop
     }
     
     template<class T>
@@ -757,8 +760,11 @@ namespace ps
         }
         _value = std::addressof(arg);
         _status |= base::constructed;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wundefined-func-template"
         ASSERT(thread_local_data().get() != nullptr, "");
         thread_local_data()->make_ready_at_thread_exit(this);
+#pragma clang diagnostic pop
     }
     
     template<class T>

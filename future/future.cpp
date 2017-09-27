@@ -123,8 +123,11 @@ namespace ps
             throw future_error(make_error_code(future_errc::promise_already_satisfied));
         }
         _status |= constructed;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wundefined-func-template"
         ASSERT(thread_local_data().get() != nullptr, "");
         thread_local_data()->make_ready_at_thread_exit(this);
+#pragma clang diagnostic pop
     }
     
     void assoc_sub_state::set_exception(const std::exception_ptr& p)
@@ -158,7 +161,10 @@ namespace ps
             throw future_error(make_error_code(future_errc::promise_already_satisfied));
         }
         _exception = p;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wundefined-func-template"
         thread_local_data()->make_ready_at_thread_exit(this);
+#pragma clang diagnostic pop
     }
     
     void assoc_sub_state::then(packaged_task_function<void(const std::exception_ptr&)>&& continuation)

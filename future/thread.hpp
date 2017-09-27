@@ -248,7 +248,10 @@ namespace ps
     {
         // _Fp = std::tuple< unique_ptr<__thread_struct>, Functor, Args...>
         std::unique_ptr<F> p(static_cast<F*>(vp));
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wundefined-func-template"
         thread_local_data().set_pointer(std::get<0>(*p).release());
+#pragma clang diagnostic pop
         using Index = typename make_tuple_indices<tuple_size<F>::value, 2>::type;
         thread_execute(*p, Index());
         return nullptr;
