@@ -27,13 +27,20 @@
 // SOFTWARE.
 //
 
-#import <UIKit/UIKit.h>
+#ifndef FUTURE_FUTURE_H
+#define FUTURE_FUTURE_H
+
+#ifdef __cplusplus
+    #define FUTURE_EXTERN extern "C"
+#else
+    #define FUTURE_EXTERN
+#endif
 
 //! Project version number for future.
-FOUNDATION_EXPORT double futureVersionNumber;
+FUTURE_EXTERN double futureVersionNumber;
 
 //! Project version string for future.
-FOUNDATION_EXPORT const unsigned char futureVersionString[];
+FUTURE_EXTERN const unsigned char futureVersionString[];
 
 // In this header, you should import all the public headers of your framework using statements like #import <future/PublicHeader.h>
 #include <future/debug.hpp>
@@ -43,3 +50,5 @@ FOUNDATION_EXPORT const unsigned char futureVersionString[];
 #include <future/thread.hpp>
 #include <future/tuple.hpp>
 #include <future/type_traits.hpp>
+
+#endif // FUTURE_FUTURE_H
