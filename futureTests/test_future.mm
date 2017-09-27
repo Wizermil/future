@@ -1481,7 +1481,7 @@
     });
     ps::thread_id tid81;
     auto fut81 = ps::async(ps::launch::queued, [&tid81]() {
-        ps::this_thread::sleep_for(2ms);
+        ps::this_thread::sleep_for(8ms);
         tid81 = ps::this_thread::get_id();
         return "2";
     });
@@ -1490,8 +1490,8 @@
     XCTAssertEqual(fut80.get(), 4);
     XCTAssertEqual(fut81.get(), std::string("2"));
     res = (std::chrono::high_resolution_clock::now() - now);
-    XCTAssertGreaterThan(res, 4ms);
-    XCTAssertLessThan(res, 4ms+dur_epsilon);
+    XCTAssertGreaterThan(res, 8ms);
+    XCTAssertLessThan(res, 8ms+dur_epsilon);
     XCTAssertNotEqual(tid80, tid81);
 }
 
