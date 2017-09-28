@@ -71,7 +71,7 @@
     XCTAssertEqual(c8.second(), 4);
     
     int i = 0;
-    ps::compressed_pair<std::function<void(void)>, int> c9;
+    ps::compressed_pair<cxx_function::unique_function<void(void)>, int> c9;
     c9.second() = 42;
     c9.first() = [&i]() {
         i = 42;

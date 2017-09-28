@@ -44,6 +44,10 @@ FUTURE_EXTERN const unsigned char futureVersionString[];
 
 // In this header, you should import all the public headers of your framework using statements like #import <future/PublicHeader.h>
 #include <future/debug.hpp>
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Weverything"
+#include <future/cxx_function.hpp>
+#pragma clang diagnostic pop
 #include <future/future.hpp>
 #include <future/memory.hpp>
 #include <future/system_error.hpp>

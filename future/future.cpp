@@ -167,7 +167,7 @@ namespace ps
 #pragma clang diagnostic pop
     }
     
-    void assoc_sub_state::then_error(packaged_task_function<void(const std::exception_ptr&)>&& continuation)
+    void assoc_sub_state::then_error(cxx_function::unique_function<void(const std::exception_ptr&)>&& continuation)
     {
         bool ready = false;
         {
@@ -270,7 +270,7 @@ namespace ps
         s->copy();
     }
     
-    void future<void>::then_error(packaged_task_function<void(const std::exception_ptr&)>&& continuation)
+    void future<void>::then_error(cxx_function::unique_function<void(const std::exception_ptr&)>&& continuation)
     {
         return _state->then_error(std::move(continuation));
     }
@@ -355,7 +355,7 @@ namespace ps
         }
     }
     
-    void shared_future<void>::then_error(packaged_task_function<void(const std::exception_ptr&)>&& continuation)
+    void shared_future<void>::then_error(cxx_function::unique_function<void(const std::exception_ptr&)>&& continuation)
     {
         return _state->then_error(std::move(continuation));
     }
@@ -470,7 +470,7 @@ namespace ps
         }
     }
 
-    void async_thread_worker::post(assoc_sub_state* task, const std::function<void()>& completion_cb)
+    void async_thread_worker::post(assoc_sub_state* task, const cxx_function::function<void()>& completion_cb)
     {
         std::unique_lock<std::mutex> lock(_m);
         if (_task != nullptr)
@@ -480,7 +480,7 @@ namespace ps
         start_task(task, completion_cb);
     }
 
-    void async_thread_worker::start_task(assoc_sub_state* task, const std::function<void()>& completion_cb)
+    void async_thread_worker::start_task(assoc_sub_state* task, const cxx_function::function<void()>& completion_cb)
     {
         _has_task = true;
         _task = task;

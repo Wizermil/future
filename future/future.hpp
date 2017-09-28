@@ -30,6 +30,10 @@
 #ifndef FUTURE_FUTURE_HPP
 #define FUTURE_FUTURE_HPP
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Weverything"
+#include "cxx_function.hpp"
+#pragma clang diagnostic pop
 #include "memory.hpp"
 #include "thread.hpp"
 #include <atomic>
@@ -145,265 +149,6 @@ namespace ps
         throw future_error(make_error_code(ev));
     }
     
-    // packaged_task_function
-    
-    template<class F> class packaged_task_base;
-    
-    template<class T, class ...ArgTypes>
-    class packaged_task_base<T(ArgTypes...)>
-    {
-    public:
-        inline packaged_task_base() = default;
-        packaged_task_base(const packaged_task_base&) = delete;
-        packaged_task_base& operator=(const packaged_task_base&) = delete;
-        packaged_task_base(packaged_task_base&&) noexcept = delete;
-        packaged_task_base& operator=(packaged_task_base&&) noexcept = delete;
-        inline virtual ~packaged_task_base() = default;
-        virtual void move_to(packaged_task_base*) noexcept = 0;
-        virtual void destroy() = 0;
-        virtual void destroy_deallocate() = 0;
-        virtual T operator()(ArgTypes&& ...) = 0;
-    };
-    
-    template<class, class, class>
-    class packaged_task_func;
-    
-    template<class F, class Alloc, class R, class ...ArgTypes>
-    class packaged_task_func<F, Alloc, R(ArgTypes...)> : public packaged_task_base<R(ArgTypes...)>
-    {
-        compressed_pair<F, Alloc> _f;
-    public:
-        inline explicit packaged_task_func(const F& f) : _f(f)
-        {
-        }
-        inline explicit packaged_task_func(F&& f) : _f(std::move(f))
-        {
-        }
-        inline packaged_task_func(const F& f, const Alloc& a) : _f(f, a)
-        {
-        }
-        inline packaged_task_func(F&& f, const Alloc& a) : _f(std::move(f), a)
-        {
-        }
-        virtual void move_to(packaged_task_base<R(ArgTypes...)>* p) noexcept;
-        virtual void destroy();
-        virtual void destroy_deallocate();
-        virtual R operator()(ArgTypes&& ... args);
-    };
-    
-    template<class F, class Alloc, class R, class ...ArgTypes>
-    void packaged_task_func<F, Alloc, R(ArgTypes...)>::move_to(packaged_task_base<R(ArgTypes...)>* p) noexcept
-    {
-        new (p) packaged_task_func(std::move(_f.first()), std::move(_f.second()));
-    }
-    
-    template<class F, class Alloc, class R, class ...ArgTypes>
-    void packaged_task_func<F, Alloc, R(ArgTypes...)>::destroy()
-    {
-        _f.~compressed_pair<F, Alloc>();
-    }
-    
-    template<class F, class Alloc, class R, class ...ArgTypes>
-    void packaged_task_func<F, Alloc, R(ArgTypes...)>::destroy_deallocate()
-    {
-        using A = typename allocator_traits_rebind<Alloc, packaged_task_func>::type;
-        using ATraits = std::allocator_traits<A>;
-        using PTraits = std::pointer_traits<typename ATraits::pointer>;
-        A a(_f.second());
-        _f.~compressed_pair<F, Alloc>();
-        a.deallocate(PTraits::pointer_to(*this), 1);
-    }
-    
-    template<class F, class Alloc, class R, class ...ArgTypes>
-    R packaged_task_func<F, Alloc, R(ArgTypes...)>::operator()(ArgTypes&& ... args)
-    {
-        return ps::invoke(_f.first(), std::forward<ArgTypes>(args)...);
-    }
-    
-    template<class Callable>
-    class packaged_task_function;
-    
-    template<class R, class ...ArgTypes>
-    class packaged_task_function<R(ArgTypes...)>
-    {
-        using base = packaged_task_base<R(ArgTypes...)>;
-        typename std::aligned_storage<3*sizeof(void*)>::type _buf;
-        base* _f;
-        
-    public:
-        using result_type = R;
-        
-        inline packaged_task_function() noexcept : _f(nullptr)
-        {
-        }
-        template<class F>
-        packaged_task_function(F&& f);
-        template<class F, class Alloc>
-        packaged_task_function(std::allocator_arg_t /*unused*/, const Alloc& a0, F&& f);
-        
-        packaged_task_function(packaged_task_function&& f) noexcept;
-        packaged_task_function& operator=(packaged_task_function&& f) noexcept;
-        
-        packaged_task_function(const packaged_task_function&) =  delete;
-        packaged_task_function& operator=(const packaged_task_function&) =  delete;
-        
-        ~packaged_task_function();
-        
-        void swap(packaged_task_function& f) noexcept;
-        
-        inline R operator()(ArgTypes... args) const;
-    };
-    
-    template<class R, class ...ArgTypes>
-    packaged_task_function<R(ArgTypes...)>::packaged_task_function(packaged_task_function&& f) noexcept
-    {
-        if (f._f == nullptr)
-        {
-            _f = nullptr;
-        }
-        else if (f._f == static_cast<base*>(&f._buf))
-        {
-            _f = static_cast<base*>(&_buf);
-            f._f->move_to(_f);
-        }
-        else
-        {
-            _f = f._f;
-            f._f = nullptr;
-        }
-    }
-    
-    template<class R, class ...ArgTypes>
-    template<class F>
-    packaged_task_function<R(ArgTypes...)>::packaged_task_function(F&& f) : _f(nullptr)
-    {
-        using FR = typename std::remove_reference<typename std::decay<F>::type>::type;
-        using FF = packaged_task_func<FR, std::allocator<FR>, R(ArgTypes...)>;
-        if (sizeof(FF) <= sizeof(_buf))
-        {
-            _f = reinterpret_cast<base*>(&_buf);
-            new (_f) FF(std::forward<F>(f));
-        }
-        else
-        {
-            using A = std::allocator<FF>;
-            A a;
-            using D = allocator_destructor<A>;
-            std::unique_ptr<base, D> hold(a.allocate(1), D(a, 1));
-            new (hold.get()) FF(std::forward<F>(f), std::allocator<FR>(a));
-            _f = hold.release();
-        }
-    }
-    
-    template<class R, class ...ArgTypes>
-    template<class F, class Alloc>
-    packaged_task_function<R(ArgTypes...)>::packaged_task_function(std:: allocator_arg_t /*unused*/, const Alloc& a0, F&& f) : _f(nullptr)
-    {
-        using FR = typename std::remove_reference<typename std::decay<F>::type>::type;
-        using FF = packaged_task_func<FR, Alloc, R(ArgTypes...)>;
-        if (sizeof(FF) <= sizeof(_buf))
-        {
-            _f = static_cast<base*>(&_buf);
-            new (_f) FF(std::forward<F>(f));
-        }
-        else
-        {
-            using A = typename allocator_traits_rebind<Alloc, FF>::type;
-            A a(a0);
-            using D = allocator_destructor<A>;
-            std::unique_ptr<base, D> hold(a.allocate(1), D(a, 1));
-            new (static_cast<void*>(std::addressof(*hold.get()))) FF(std::forward<F>(f), Alloc(a));
-            _f = std::addressof(*hold.release());
-        }
-    }
-    
-    template<class R, class ...ArgTypes>
-    packaged_task_function<R(ArgTypes...)>& packaged_task_function<R(ArgTypes...)>::operator=(packaged_task_function&& f) noexcept
-    {
-        if (_f == reinterpret_cast<base*>(&_buf))
-        {
-            _f->destroy();
-        }
-        else if (_f)
-        {
-            _f->destroy_deallocate();
-        }
-        
-        _f = nullptr;
-        if (f._f == nullptr)
-        {
-            _f = nullptr;
-        }
-        else if (f._f == reinterpret_cast<base*>(&f._buf))
-        {
-            _f = reinterpret_cast<base*>(&_buf);
-            f._f->move_to(_f);
-        }
-        else
-        {
-            _f = f._f;
-            f._f = nullptr;
-        }
-        return *this;
-    }
-    
-    template<class R, class ...ArgTypes>
-    packaged_task_function<R(ArgTypes...)>::~packaged_task_function()
-    {
-        if (_f == reinterpret_cast<base*>(&_buf))
-        {
-            _f->destroy();
-        }
-        else if (_f)
-        {
-            _f->destroy_deallocate();
-        }
-    }
-    
-    template<class R, class ...ArgTypes>
-    void packaged_task_function<R(ArgTypes...)>::swap(packaged_task_function& f) noexcept
-    {
-        if (_f == static_cast<base*>(&_buf) && f._f == static_cast<base*>(&f._buf))
-        {
-            typename std::aligned_storage<sizeof(_buf)>::type tempbuf;
-            auto t = static_cast<base*>(&tempbuf);
-            _f->move_to(t);
-            _f->destroy();
-            _f = nullptr;
-            f._f->move_to(static_cast<base*>(&_buf));
-            f._f->destroy();
-            f._f = nullptr;
-            _f = static_cast<base*>(&_buf);
-            t->move_to(static_cast<base*>(&f._buf));
-            t->destroy();
-            f._f = static_cast<base*>(&f._buf);
-        }
-        else if (_f == static_cast<base*>(&_buf))
-        {
-            _f->move_to(static_cast<base*>(&f._buf));
-            _f->destroy();
-            _f = f._f;
-            f._f = static_cast<base*>(&f._buf);
-        }
-        else if (f._f == static_cast<base*>(&f._buf))
-        {
-            f._f->move_to(static_cast<base*>(&_buf));
-            f._f->destroy();
-            f._f = _f;
-            _f = static_cast<base*>(&_buf);
-        }
-        else
-        {
-            std::swap(_f, f._f);
-        }
-    }
-    
-    template<class R, class ...ArgTypes>
-    inline R packaged_task_function<R(ArgTypes...)>::operator()(ArgTypes... args) const
-    {
-        return (*_f)(std::forward<ArgTypes>(args)...);
-    }
-    
     // assoc_sub_state
     
     template<class T>
@@ -448,11 +193,11 @@ namespace ps
     class assoc_sub_state : public shared_count
     {
     protected:
-        std::exception_ptr _exception;
+        std::exception_ptr _exception { nullptr};
         mutable std::mutex _mut;
         mutable std::condition_variable _cv;
-        std::atomic<unsigned> _status;
-        packaged_task_function<void(const std::exception_ptr&)> _continuation;
+        std::atomic<unsigned> _status {0};
+        cxx_function::unique_function<void(const std::exception_ptr&)> _continuation {nullptr};
         
         void on_zero_shared() noexcept override;
         void sub_wait(std::unique_lock<std::mutex>& lk);
@@ -468,9 +213,7 @@ namespace ps
             continuation_attached = 64,
         };
         
-        inline assoc_sub_state() : _status(0)
-        {
-        }
+        inline assoc_sub_state() = default;
         
         inline bool has_value() const
         {
@@ -515,7 +258,7 @@ namespace ps
         void set_exception(const std::exception_ptr& p);
         void set_exception_at_thread_exit(const std::exception_ptr& p);
         
-        void then_error(packaged_task_function<void(const std::exception_ptr&)>&& continuation);
+        void then_error(cxx_function::unique_function<void(const std::exception_ptr&)>&& continuation);
         template<class T, class F, class Arg = future<T>>
         future_then_t<T, F, Arg> then(Arg&& future, F&& func);
         inline bool has_continuation() const
@@ -565,6 +308,7 @@ namespace ps
         using R = typename future_held<future_then_ret_t<T, F, Arg>>::type;
         promise<R> prom;
         auto ret = prom.get_future();
+
         then_error([fut = std::forward<Arg>(future), p = std::move(prom), f = std::forward<F>(func)](const std::exception_ptr& exception) mutable {
             if (exception != nullptr)
             {
@@ -1049,7 +793,7 @@ namespace ps
         bool _has_task {false};
         std::condition_variable _start_cond;
         assoc_sub_state* _task {nullptr};
-        std::function<void()> _completion_cb {nullptr};
+        cxx_function::function<void()> _completion_cb {nullptr};
     public:
         async_thread_worker();
         ~async_thread_worker();
@@ -1061,10 +805,10 @@ namespace ps
             return !_has_task;
         }
 
-        void post(assoc_sub_state* task, const std::function<void()>& completion_cb);
+        void post(assoc_sub_state* task, const cxx_function::function<void()>& completion_cb);
 
     private:
-        void start_task(assoc_sub_state* task, const std::function<void()>& completion_cb);
+        void start_task(assoc_sub_state* task, const cxx_function::function<void()>& completion_cb);
     };
 
     class async_thread_pool
@@ -1139,7 +883,7 @@ namespace ps
         friend std::conditional_t<is_reference_wrapper<std::decay_t<R>>::value, future<std::decay_t<R>&>, future<std::decay_t<R>>> make_ready_future(R&& value);
         friend assoc_sub_state;
         
-        void then_error(packaged_task_function<void(const std::exception_ptr&)>&& continuation);
+        void then_error(cxx_function::unique_function<void(const std::exception_ptr&)>&& continuation);
         
     public:
         inline future() noexcept = default;
@@ -1234,7 +978,7 @@ namespace ps
     }
     
     template<class T>
-    void future<T>::then_error(packaged_task_function<void(const std::exception_ptr&)>&& continuation)
+    void future<T>::then_error(cxx_function::unique_function<void(const std::exception_ptr&)>&& continuation)
     {
         return _state->then_error(std::move(continuation));
     }
@@ -1273,7 +1017,7 @@ namespace ps
         friend std::conditional_t<is_reference_wrapper<std::decay_t<R>>::value, future<std::decay_t<R>&>, future<std::decay_t<R>>> make_ready_future(R&& value);
         friend assoc_sub_state;
         
-        void then_error(packaged_task_function<void(const std::exception_ptr&)>&& continuation);
+        void then_error(cxx_function::unique_function<void(const std::exception_ptr&)>&& continuation);
         
     public:
         inline future() noexcept = default;
@@ -1368,7 +1112,7 @@ namespace ps
     }
     
     template<class T>
-    void future<T&>::then_error(packaged_task_function<void(const std::exception_ptr&)>&& continuation)
+    void future<T&>::then_error(cxx_function::unique_function<void(const std::exception_ptr&)>&& continuation)
     {
         return _state->then_error(std::move(continuation));
     }
@@ -1406,7 +1150,7 @@ namespace ps
         friend future<void> make_ready_future();
         friend assoc_sub_state;
         
-        void then_error(packaged_task_function<void(const std::exception_ptr&)>&& continuation);
+        void then_error(cxx_function::unique_function<void(const std::exception_ptr&)>&& continuation);
         
     public:
         inline future() noexcept = default;
@@ -1858,6 +1602,265 @@ namespace ps
         promise<T> p;
         p.set_exception(std::make_exception_ptr(ex));
         return p.get_future();
+    }
+
+    // packaged_task_function
+
+    template<class F> class packaged_task_base;
+
+    template<class T, class ...ArgTypes>
+    class packaged_task_base<T(ArgTypes...)>
+    {
+    public:
+        inline packaged_task_base() = default;
+        packaged_task_base(const packaged_task_base&) = delete;
+        packaged_task_base& operator=(const packaged_task_base&) = delete;
+        packaged_task_base(packaged_task_base&&) noexcept = delete;
+        packaged_task_base& operator=(packaged_task_base&&) noexcept = delete;
+        inline virtual ~packaged_task_base() = default;
+        virtual void move_to(packaged_task_base*) noexcept = 0;
+        virtual void destroy() = 0;
+        virtual void destroy_deallocate() = 0;
+        virtual T operator()(ArgTypes&& ...) = 0;
+    };
+
+    template<class, class, class>
+    class packaged_task_func;
+
+    template<class F, class Alloc, class R, class ...ArgTypes>
+    class packaged_task_func<F, Alloc, R(ArgTypes...)> : public packaged_task_base<R(ArgTypes...)>
+    {
+        compressed_pair<F, Alloc> _f;
+    public:
+        inline explicit packaged_task_func(const F& f) : _f(f)
+        {
+        }
+        inline explicit packaged_task_func(F&& f) : _f(std::move(f))
+        {
+        }
+        inline packaged_task_func(const F& f, const Alloc& a) : _f(f, a)
+        {
+        }
+        inline packaged_task_func(F&& f, const Alloc& a) : _f(std::move(f), a)
+        {
+        }
+        virtual void move_to(packaged_task_base<R(ArgTypes...)>* p) noexcept;
+        virtual void destroy();
+        virtual void destroy_deallocate();
+        virtual R operator()(ArgTypes&& ... args);
+    };
+
+    template<class F, class Alloc, class R, class ...ArgTypes>
+    void packaged_task_func<F, Alloc, R(ArgTypes...)>::move_to(packaged_task_base<R(ArgTypes...)>* p) noexcept
+    {
+        new (p) packaged_task_func(std::move(_f.first()), std::move(_f.second()));
+    }
+
+    template<class F, class Alloc, class R, class ...ArgTypes>
+    void packaged_task_func<F, Alloc, R(ArgTypes...)>::destroy()
+    {
+        _f.~compressed_pair<F, Alloc>();
+    }
+
+    template<class F, class Alloc, class R, class ...ArgTypes>
+    void packaged_task_func<F, Alloc, R(ArgTypes...)>::destroy_deallocate()
+    {
+        using A = typename allocator_traits_rebind<Alloc, packaged_task_func>::type;
+        using ATraits = std::allocator_traits<A>;
+        using PTraits = std::pointer_traits<typename ATraits::pointer>;
+        A a(_f.second());
+        _f.~compressed_pair<F, Alloc>();
+        a.deallocate(PTraits::pointer_to(*this), 1);
+    }
+
+    template<class F, class Alloc, class R, class ...ArgTypes>
+    R packaged_task_func<F, Alloc, R(ArgTypes...)>::operator()(ArgTypes&& ... args)
+    {
+        return ps::invoke(_f.first(), std::forward<ArgTypes>(args)...);
+    }
+
+    template<class Callable>
+    class packaged_task_function;
+
+    template<class R, class ...ArgTypes>
+    class packaged_task_function<R(ArgTypes...)>
+    {
+        using base = packaged_task_base<R(ArgTypes...)>;
+        typename std::aligned_storage<3*sizeof(void*)>::type _buf;
+        base* _f;
+
+    public:
+        using result_type = R;
+
+        inline packaged_task_function() noexcept : _f(nullptr)
+        {
+        }
+        template<class F>
+        packaged_task_function(F&& f);
+        template<class F, class Alloc>
+        packaged_task_function(std::allocator_arg_t /*unused*/, const Alloc& a0, F&& f);
+
+        packaged_task_function(packaged_task_function&& f) noexcept;
+        packaged_task_function& operator=(packaged_task_function&& f) noexcept;
+
+        packaged_task_function(const packaged_task_function&) =  delete;
+        packaged_task_function& operator=(const packaged_task_function&) =  delete;
+
+        ~packaged_task_function();
+
+        void swap(packaged_task_function& f) noexcept;
+
+        inline R operator()(ArgTypes... args) const;
+    };
+
+    template<class R, class ...ArgTypes>
+    packaged_task_function<R(ArgTypes...)>::packaged_task_function(packaged_task_function&& f) noexcept
+    {
+        if (f._f == nullptr)
+        {
+            _f = nullptr;
+        }
+        else if (f._f == static_cast<base*>(&f._buf))
+        {
+            _f = static_cast<base*>(&_buf);
+            f._f->move_to(_f);
+        }
+        else
+        {
+            _f = f._f;
+            f._f = nullptr;
+        }
+    }
+
+    template<class R, class ...ArgTypes>
+    template<class F>
+    packaged_task_function<R(ArgTypes...)>::packaged_task_function(F&& f) : _f(nullptr)
+    {
+        using FR = typename std::remove_reference<typename std::decay<F>::type>::type;
+        using FF = packaged_task_func<FR, std::allocator<FR>, R(ArgTypes...)>;
+        if (sizeof(FF) <= sizeof(_buf))
+        {
+            _f = reinterpret_cast<base*>(&_buf);
+            new (_f) FF(std::forward<F>(f));
+        }
+        else
+        {
+            using A = std::allocator<FF>;
+            A a;
+            using D = allocator_destructor<A>;
+            std::unique_ptr<base, D> hold(a.allocate(1), D(a, 1));
+            new (hold.get()) FF(std::forward<F>(f), std::allocator<FR>(a));
+            _f = hold.release();
+        }
+    }
+
+    template<class R, class ...ArgTypes>
+    template<class F, class Alloc>
+    packaged_task_function<R(ArgTypes...)>::packaged_task_function(std:: allocator_arg_t /*unused*/, const Alloc& a0, F&& f) : _f(nullptr)
+    {
+        using FR = typename std::remove_reference<typename std::decay<F>::type>::type;
+        using FF = packaged_task_func<FR, Alloc, R(ArgTypes...)>;
+        if (sizeof(FF) <= sizeof(_buf))
+        {
+            _f = static_cast<base*>(&_buf);
+            new (_f) FF(std::forward<F>(f));
+        }
+        else
+        {
+            using A = typename allocator_traits_rebind<Alloc, FF>::type;
+            A a(a0);
+            using D = allocator_destructor<A>;
+            std::unique_ptr<base, D> hold(a.allocate(1), D(a, 1));
+            new (static_cast<void*>(std::addressof(*hold.get()))) FF(std::forward<F>(f), Alloc(a));
+            _f = std::addressof(*hold.release());
+        }
+    }
+
+    template<class R, class ...ArgTypes>
+    packaged_task_function<R(ArgTypes...)>& packaged_task_function<R(ArgTypes...)>::operator=(packaged_task_function&& f) noexcept
+    {
+        if (_f == reinterpret_cast<base*>(&_buf))
+        {
+            _f->destroy();
+        }
+        else if (_f)
+        {
+            _f->destroy_deallocate();
+        }
+
+        _f = nullptr;
+        if (f._f == nullptr)
+        {
+            _f = nullptr;
+        }
+        else if (f._f == reinterpret_cast<base*>(&f._buf))
+        {
+            _f = reinterpret_cast<base*>(&_buf);
+            f._f->move_to(_f);
+        }
+        else
+        {
+            _f = f._f;
+            f._f = nullptr;
+        }
+        return *this;
+    }
+
+    template<class R, class ...ArgTypes>
+    packaged_task_function<R(ArgTypes...)>::~packaged_task_function()
+    {
+        if (_f == reinterpret_cast<base*>(&_buf))
+        {
+            _f->destroy();
+        }
+        else if (_f)
+        {
+            _f->destroy_deallocate();
+        }
+    }
+
+    template<class R, class ...ArgTypes>
+    void packaged_task_function<R(ArgTypes...)>::swap(packaged_task_function& f) noexcept
+    {
+        if (_f == static_cast<base*>(&_buf) && f._f == static_cast<base*>(&f._buf))
+        {
+            typename std::aligned_storage<sizeof(_buf)>::type tempbuf;
+            auto t = static_cast<base*>(&tempbuf);
+            _f->move_to(t);
+            _f->destroy();
+            _f = nullptr;
+            f._f->move_to(static_cast<base*>(&_buf));
+            f._f->destroy();
+            f._f = nullptr;
+            _f = static_cast<base*>(&_buf);
+            t->move_to(static_cast<base*>(&f._buf));
+            t->destroy();
+            f._f = static_cast<base*>(&f._buf);
+        }
+        else if (_f == static_cast<base*>(&_buf))
+        {
+            _f->move_to(static_cast<base*>(&f._buf));
+            _f->destroy();
+            _f = f._f;
+            f._f = static_cast<base*>(&f._buf);
+        }
+        else if (f._f == static_cast<base*>(&f._buf))
+        {
+            f._f->move_to(static_cast<base*>(&_buf));
+            f._f->destroy();
+            f._f = _f;
+            _f = static_cast<base*>(&_buf);
+        }
+        else
+        {
+            std::swap(_f, f._f);
+        }
+    }
+
+    template<class R, class ...ArgTypes>
+    inline R packaged_task_function<R(ArgTypes...)>::operator()(ArgTypes... args) const
+    {
+        return (*_f)(std::forward<ArgTypes>(args)...);
     }
     
     // packaged_task
@@ -2549,7 +2552,7 @@ namespace ps
         template<std::size_t I, typename Context, typename Future>
         friend void __attribute__((__visibility__("hidden"))) when_inner_helper(Context context, Future&& f);
         
-        void then_error(packaged_task_function<void(const std::exception_ptr&)>&& continuation);
+        void then_error(cxx_function::unique_function<void(const std::exception_ptr&)>&& continuation);
         
     public:
         inline shared_future() noexcept : _state(nullptr)
@@ -2654,7 +2657,7 @@ namespace ps
     }
     
     template<class T>
-    void shared_future<T>::then_error(packaged_task_function<void(const std::exception_ptr&)>&& continuation)
+    void shared_future<T>::then_error(cxx_function::unique_function<void(const std::exception_ptr&)>&& continuation)
     {
         return _state->then_error(std::move(continuation));
     }
@@ -2678,7 +2681,7 @@ namespace ps
         template<std::size_t I, typename Context, typename Future>
         friend void __attribute__((__visibility__("hidden"))) when_inner_helper(Context context, Future&& f);
         
-        void then_error(packaged_task_function<void(const std::exception_ptr&)>&& continuation);
+        void then_error(cxx_function::unique_function<void(const std::exception_ptr&)>&& continuation);
         
     public:
         inline shared_future() noexcept : _state(nullptr)
@@ -2788,7 +2791,7 @@ namespace ps
     }
     
     template<class T>
-    void shared_future<T&>::then_error(packaged_task_function<void(const std::exception_ptr&)>&& continuation)
+    void shared_future<T&>::then_error(cxx_function::unique_function<void(const std::exception_ptr&)>&& continuation)
     {
         return _state->then_error(std::move(continuation));
     }
@@ -2805,7 +2808,7 @@ namespace ps
         template<std::size_t I, typename Context, typename Future>
         friend void __attribute__((__visibility__("hidden"))) when_inner_helper(Context context, Future&& f);
         
-        void then_error(packaged_task_function<void(const std::exception_ptr&)>&& continuation);
+        void then_error(cxx_function::unique_function<void(const std::exception_ptr&)>&& continuation);
         
     public:
         inline shared_future() noexcept : _state(nullptr)
