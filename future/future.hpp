@@ -576,21 +576,15 @@ namespace ps
                 {
                     if constexpr(std::is_void_v<R> && is_future<future_then_ret_t<T, F, Arg>>::value)
                     {
-                        auto fut_then = ps::invoke(std::forward<F>(f), std::forward<Arg>(fut));
-                        fut_then._state->add_shared();
-                        fut_then.then_error([prom_fut = std::move(p), t = fut_then._state](const std::exception_ptr& except) mutable {
+                        ps::invoke(std::forward<F>(f), std::forward<Arg>(fut)).then_error([prom_fut = std::move(p)](const std::exception_ptr& except) mutable {
                             if (except == nullptr)
                             {
-                                t->_status &= ~future_attached;
-                                future_then_ret_t<T, F, Arg> fut_arg(t);
-                                fut_arg.get();
                                 prom_fut.set_value();
                             }
                             else
                             {
                                 prom_fut.set_exception(except);
                             }
-                            t->release_shared();
                         });
                     }
                     else if constexpr(std::is_void_v<R> && !is_future<future_then_ret_t<T, F, Arg>>::value)
