@@ -158,7 +158,7 @@
     std::exception_ptr i = nullptr;
     ps::assoc_sub_state a;
     a.make_ready();
-    a.then([&i](std::exception_ptr e) {
+    a.then_error([&i](std::exception_ptr e) {
         i = e;
     });
     XCTAssertEqual(i, nullptr);
@@ -166,7 +166,7 @@
     i = nullptr;
     ps::assoc_sub_state b;
     b.set_value();
-    b.then([&i](std::exception_ptr e) {
+    b.then_error([&i](std::exception_ptr e) {
         i = e;
     });
     XCTAssertEqual(i, nullptr);
@@ -174,7 +174,7 @@
     i = nullptr;
     ps::assoc_sub_state c;
     c.set_exception(std::make_exception_ptr(std::logic_error("logic_error")));
-    c.then([&i](std::exception_ptr e) {
+    c.then_error([&i](std::exception_ptr e) {
         i = e;
     });
     XCTAssertNotEqual(i, nullptr);

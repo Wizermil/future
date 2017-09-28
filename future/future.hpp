@@ -515,9 +515,9 @@ namespace ps
         void set_exception(const std::exception_ptr& p);
         void set_exception_at_thread_exit(const std::exception_ptr& p);
         
-        void then(packaged_task_function<void(const std::exception_ptr&)>&& continuation);
+        void then_error(packaged_task_function<void(const std::exception_ptr&)>&& continuation);
         template<class T, class F, class Arg = future<T>>
-        future_then_t<T, F, Arg> then(Arg& future, F&& func);
+        future_then_t<T, F, Arg> then(Arg&& future, F&& func);
         inline bool has_continuation() const
         {
             return (_status & continuation_attached) != 0;
@@ -560,12 +560,12 @@ namespace ps
     }
     
     template<class T, class F, class Arg>
-    future_then_t<T, F, Arg> assoc_sub_state::then(Arg& future, F&& func)
+    future_then_t<T, F, Arg> assoc_sub_state::then(Arg&& future, F&& func)
     {
         using R = typename future_held<future_then_ret_t<T, F, Arg>>::type;
         promise<R> prom;
         auto ret = prom.get_future();
-        then([this, &future, p = std::move(prom), f = decay_copy(func)](const std::exception_ptr& exception) mutable {
+        then_error([fut = std::forward<Arg>(future), p = std::move(prom), f = std::forward<F>(func)](const std::exception_ptr& exception) mutable {
             if (exception != nullptr)
             {
                 p.set_exception(exception);
@@ -576,21 +576,49 @@ namespace ps
                 {
                     if constexpr(std::is_void_v<R> && is_future<future_then_ret_t<T, F, Arg>>::value)
                     {
-                        ps::invoke(std::move(f), std::move(future)).get();
-                        p.set_value();
+                        auto fut_then = ps::invoke(std::forward<F>(f), std::forward<Arg>(fut));
+                        fut_then._state->add_shared();
+                        fut_then.then_error([prom_fut = std::move(p), t = fut_then._state](const std::exception_ptr& except) mutable {
+                            if (except == nullptr)
+                            {
+                                t->_status &= ~future_attached;
+                                future_then_ret_t<T, F, Arg> fut_arg(t);
+                                fut_arg.get();
+                                prom_fut.set_value();
+                            }
+                            else
+                            {
+                                prom_fut.set_exception(except);
+                            }
+                            t->release_shared();
+                        });
                     }
                     else if constexpr(std::is_void_v<R> && !is_future<future_then_ret_t<T, F, Arg>>::value)
                     {
-                        ps::invoke(std::move(f), std::move(future));
+                        ps::invoke(std::forward<F>(f), std::forward<Arg>(fut));
                         p.set_value();
                     }
                     else if constexpr(!std::is_void_v<R> && !is_future<future_then_ret_t<T, F, Arg>>::value)
                     {
-                        p.set_value(ps::invoke(std::move(f), std::move(future)));
+                        p.set_value(ps::invoke(std::forward<F>(f), std::forward<Arg>(fut)));
                     }
                     else if constexpr(!std::is_void_v<R> && is_future<future_then_ret_t<T, F, Arg>>::value)
                     {
-                        p.set_value(ps::invoke(std::move(f), std::move(future)).get());
+                        auto fut_then = ps::invoke(std::forward<F>(f), std::forward<Arg>(fut));
+                        fut_then._state->add_shared();
+                        fut_then.then_error([prom_fut = std::move(p), t = fut_then._state](const std::exception_ptr& except) mutable {
+                            if (except == nullptr)
+                            {
+                                t->_status &= ~future_attached;
+                                future_then_ret_t<T, F, Arg> fut_arg(t);
+                                prom_fut.set_value(fut_arg.get());
+                            }
+                            else
+                            {
+                                prom_fut.set_exception(except);
+                            }
+                            t->release_shared();
+                        });
                     }
                 }
                 catch(...)
@@ -1115,8 +1143,9 @@ namespace ps
         friend void __attribute__((__visibility__("hidden"))) when_any_inner_helper(Context context);
         template<class R>
         friend std::conditional_t<is_reference_wrapper<std::decay_t<R>>::value, future<std::decay_t<R>&>, future<std::decay_t<R>>> make_ready_future(R&& value);
+        friend assoc_sub_state;
         
-        void then(packaged_task_function<void(const std::exception_ptr&)>&& continuation);
+        void then_error(packaged_task_function<void(const std::exception_ptr&)>&& continuation);
         
     public:
         inline future() noexcept : _state(nullptr)
@@ -1209,13 +1238,13 @@ namespace ps
     template<class F>
     future_then_t<T, F> future<T>::then(F&& func)
     {
-        return _state->template then<T, F>(*this, decay_copy(func));
+        return _state->template then<T, F>(std::move(*this), std::forward<F>(func));
     }
     
     template<class T>
-    void future<T>::then(packaged_task_function<void(const std::exception_ptr&)>&& continuation)
+    void future<T>::then_error(packaged_task_function<void(const std::exception_ptr&)>&& continuation)
     {
-        return _state->then(std::move(continuation));
+        return _state->then_error(std::move(continuation));
     }
     
     // future<T&>
@@ -1250,8 +1279,9 @@ namespace ps
         friend void __attribute__((__visibility__("hidden"))) when_any_inner_helper(Context context);
         template<class R>
         friend std::conditional_t<is_reference_wrapper<std::decay_t<R>>::value, future<std::decay_t<R>&>, future<std::decay_t<R>>> make_ready_future(R&& value);
+        friend assoc_sub_state;
         
-        void then(packaged_task_function<void(const std::exception_ptr&)>&& continuation);
+        void then_error(packaged_task_function<void(const std::exception_ptr&)>&& continuation);
         
     public:
         inline future() noexcept : _state(nullptr)
@@ -1344,13 +1374,13 @@ namespace ps
     template<class F>
     future_then_t<T&, F> future<T&>::then(F&& func)
     {
-        return _state->template then<T&, F>(*this, decay_copy(func));
+        return _state->template then<T&, F>(std::move(*this), std::forward<F>(func));
     }
     
     template<class T>
-    void future<T&>::then(packaged_task_function<void(const std::exception_ptr&)>&& continuation)
+    void future<T&>::then_error(packaged_task_function<void(const std::exception_ptr&)>&& continuation)
     {
-        return _state->then(std::move(continuation));
+        return _state->then_error(std::move(continuation));
     }
     
     // future<void>
@@ -1384,8 +1414,9 @@ namespace ps
         template<size_t I, typename Context>
         friend void __attribute__((__visibility__("hidden"))) when_any_inner_helper(Context context);
         friend future<void> make_ready_future();
+        friend assoc_sub_state;
         
-        void then(packaged_task_function<void(const std::exception_ptr&)>&& continuation);
+        void then_error(packaged_task_function<void(const std::exception_ptr&)>&& continuation);
         
     public:
         inline future() noexcept : _state(nullptr)
@@ -1449,7 +1480,7 @@ namespace ps
     template<class F>
     future_then_t<void, F> future<void>::then(F&& func)
     {
-        return _state->template then<void, F>(*this, decay_copy(func));
+        return _state->template then<void, F>(std::move(*this), std::forward<F>(func));
     }
     
     template<class T>
@@ -2173,18 +2204,18 @@ namespace ps
 
         if (does_policy_contain(policy, launch::queued))
         {
-            return make_queued_assoc_state<R>(BF(decay_copy(std::forward<F>(f)), decay_copy(std::forward<Args>(args))...));
+            return make_queued_assoc_state<R>(BF(decay_copy(f), decay_copy(args)...));
         }
         else if (does_policy_contain(policy, launch::thread_pool))
         {
-            return make_thread_pool_assoc_state<R>(BF(decay_copy(std::forward<F>(f)), decay_copy(std::forward<Args>(args))...));
+            return make_thread_pool_assoc_state<R>(BF(decay_copy(f), decay_copy(args)...));
         }
         
         try
         {
             if (does_policy_contain(policy, launch::async))
             {
-                return make_async_assoc_state<R>(BF(decay_copy(std::forward<F>(f)), decay_copy(std::forward<Args>(args))...));
+                return make_async_assoc_state<R>(BF(decay_copy(f), decay_copy(args)...));
             }
         }
         catch (...)
@@ -2197,7 +2228,7 @@ namespace ps
         
         if (does_policy_contain(policy, launch::deferred))
         {
-            return make_deferred_assoc_state<R>(BF(decay_copy(std::forward<F>(f)), decay_copy(std::forward<Args>(args))...));
+            return make_deferred_assoc_state<R>(BF(decay_copy(f), decay_copy(args)...));
         }
         return future<R>{};
     }
@@ -2234,7 +2265,7 @@ namespace ps
         for (; first != last; ++first, ++index)
         {
             shared_context->result.push_back(std::move(*first));
-            shared_context->result[index].then([shared_context, index](const std::exception_ptr exception) {
+            shared_context->result[index].then_error([shared_context, index](const std::exception_ptr exception) {
                 std::lock_guard<std::mutex> lock(shared_context->mutex);
                 ++shared_context->ready_futures;
                 if (exception != nullptr)
@@ -2263,7 +2294,7 @@ namespace ps
     void __attribute__((__visibility__("hidden"))) when_inner_helper(Context context, Future&& f)
     {
         std::get<I>(context->result) = std::forward<Future>(f);
-        std::get<I>(context->result).then([context](const std::exception_ptr exception) {
+        std::get<I>(context->result).then_error([context](const std::exception_ptr exception) {
             std::lock_guard<std::mutex> lock(context->mutex);
             ++context->ready_futures;
             if (exception != nullptr)
@@ -2351,7 +2382,7 @@ namespace ps
         for (size_t index = 0; first != last; ++first, ++index)
         {
             shared_context->result.sequence.push_back(std::move(*first));
-            shared_context->result.sequence[index].then([shared_context, index](const std::exception_ptr exception) {
+            shared_context->result.sequence[index].then_error([shared_context, index](const std::exception_ptr exception) {
                 std::lock_guard<std::mutex> lock(shared_context->mutex);
                 if (exception != nullptr)
                 {
@@ -2407,7 +2438,7 @@ namespace ps
     template<size_t I, typename Context>
     void __attribute__((__visibility__("hidden"))) when_any_inner_helper(Context context)
     {
-        std::get<I>(context->result.sequence).then([context](const std::exception_ptr exception) {
+        std::get<I>(context->result.sequence).then_error([context](const std::exception_ptr exception) {
             std::lock_guard<std::mutex> lock(context->mutex);
             if (exception != nullptr)
             {
@@ -2530,7 +2561,7 @@ namespace ps
         template<std::size_t I, typename Context, typename Future>
         friend void __attribute__((__visibility__("hidden"))) when_inner_helper(Context context, Future&& f);
         
-        void then(packaged_task_function<void(const std::exception_ptr&)>&& continuation);
+        void then_error(packaged_task_function<void(const std::exception_ptr&)>&& continuation);
         
     public:
         inline shared_future() noexcept : _state(nullptr)
@@ -2635,16 +2666,16 @@ namespace ps
     }
     
     template<class T>
-    void shared_future<T>::then(packaged_task_function<void(const std::exception_ptr&)>&& continuation)
+    void shared_future<T>::then_error(packaged_task_function<void(const std::exception_ptr&)>&& continuation)
     {
-        return _state->then(std::move(continuation));
+        return _state->then_error(std::move(continuation));
     }
     
     template<class T>
     template<class F>
     future_then_t<T, F, shared_future<T>> shared_future<T>::then(F&& func)
     {
-        return _state->template then<T, F>(*this, decay_copy(func));
+        return _state->template then<T, F>(std::move(*this), std::forward<F>(func));
     }
     
     // shared_future<T&>
@@ -2659,7 +2690,7 @@ namespace ps
         template<std::size_t I, typename Context, typename Future>
         friend void __attribute__((__visibility__("hidden"))) when_inner_helper(Context context, Future&& f);
         
-        void then(packaged_task_function<void(const std::exception_ptr&)>&& continuation);
+        void then_error(packaged_task_function<void(const std::exception_ptr&)>&& continuation);
         
     public:
         inline shared_future() noexcept : _state(nullptr)
@@ -2765,13 +2796,13 @@ namespace ps
     template<class F>
     future_then_t<T, F, shared_future<T>> shared_future<T&>::then(F&& func)
     {
-        return _state->template then<T, F>(*this, decay_copy(func));
+        return _state->template then<T, F>(std::move(*this), std::forward<F>(func));
     }
     
     template<class T>
-    void shared_future<T&>::then(packaged_task_function<void(const std::exception_ptr&)>&& continuation)
+    void shared_future<T&>::then_error(packaged_task_function<void(const std::exception_ptr&)>&& continuation)
     {
-        return _state->then(std::move(continuation));
+        return _state->then_error(std::move(continuation));
     }
     
     // shared_future<void>
@@ -2786,7 +2817,7 @@ namespace ps
         template<std::size_t I, typename Context, typename Future>
         friend void __attribute__((__visibility__("hidden"))) when_inner_helper(Context context, Future&& f);
         
-        void then(packaged_task_function<void(const std::exception_ptr&)>&& continuation);
+        void then_error(packaged_task_function<void(const std::exception_ptr&)>&& continuation);
         
     public:
         inline shared_future() noexcept : _state(nullptr)
@@ -2861,7 +2892,7 @@ namespace ps
     template<class F>
     future_then_t<void, F, shared_future<void>> shared_future<void>::then(F&& func)
     {
-        return _state->template then<void, F>(*this, decay_copy(func));
+        return _state->template then<void, F>(std::move(*this), std::forward<F>(func));
     }
     
     inline shared_future<void> future<void>::share() noexcept

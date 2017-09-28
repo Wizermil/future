@@ -167,7 +167,7 @@ namespace ps
 #pragma clang diagnostic pop
     }
     
-    void assoc_sub_state::then(packaged_task_function<void(const std::exception_ptr&)>&& continuation)
+    void assoc_sub_state::then_error(packaged_task_function<void(const std::exception_ptr&)>&& continuation)
     {
         bool ready = false;
         {
@@ -270,9 +270,9 @@ namespace ps
         s->copy();
     }
     
-    void future<void>::then(packaged_task_function<void(const std::exception_ptr&)>&& continuation)
+    void future<void>::then_error(packaged_task_function<void(const std::exception_ptr&)>&& continuation)
     {
-        return _state->then(std::move(continuation));
+        return _state->then_error(std::move(continuation));
     }
     
     future<void> make_ready_future()
@@ -355,9 +355,9 @@ namespace ps
         }
     }
     
-    void shared_future<void>::then(packaged_task_function<void(const std::exception_ptr&)>&& continuation)
+    void shared_future<void>::then_error(packaged_task_function<void(const std::exception_ptr&)>&& continuation)
     {
-        return _state->then(std::move(continuation));
+        return _state->then_error(std::move(continuation));
     }
 
     // async_queued
