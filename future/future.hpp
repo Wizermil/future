@@ -1110,7 +1110,7 @@ namespace ps
     template<class T>
     class future
     {
-        assoc_state<T>* _state;
+        assoc_state<T>* _state {nullptr};
         
         explicit future(assoc_state<T>* state);
         
@@ -1142,9 +1142,7 @@ namespace ps
         void then_error(packaged_task_function<void(const std::exception_ptr&)>&& continuation);
         
     public:
-        inline future() noexcept : _state(nullptr)
-        {
-        }
+        inline future() noexcept = default;
         inline future(future&& rhs) noexcept : _state(rhs._state)
         {
             rhs._state = nullptr;
@@ -1246,7 +1244,7 @@ namespace ps
     template<class T>
     class future<T&>
     {
-        assoc_state<T&>* _state{nullptr};
+        assoc_state<T&>* _state {nullptr};
         
         explicit future(assoc_state<T&>* state);
         
@@ -1278,9 +1276,7 @@ namespace ps
         void then_error(packaged_task_function<void(const std::exception_ptr&)>&& continuation);
         
     public:
-        inline future() noexcept : _state(nullptr)
-        {
-        }
+        inline future() noexcept = default;
         inline future(future&& rhs) noexcept : _state(rhs._state)
         {
             rhs._state = nullptr;
@@ -1382,7 +1378,7 @@ namespace ps
     template<>
     class future<void>
     {
-        assoc_sub_state* _state{nullptr};
+        assoc_sub_state* _state {nullptr};
         
         explicit future(assoc_sub_state* state);
         
@@ -1413,9 +1409,7 @@ namespace ps
         void then_error(packaged_task_function<void(const std::exception_ptr&)>&& continuation);
         
     public:
-        inline future() noexcept : _state(nullptr)
-        {
-        }
+        inline future() noexcept = default;
         inline future(future&& rhs) noexcept : _state(rhs._state)
         {
             rhs._state = nullptr;
@@ -1491,9 +1485,9 @@ namespace ps
     template<class T>
     class promise
     {
-        assoc_state<T>* _state;
+        assoc_state<T>* _state {nullptr};
         
-        inline explicit promise(std::nullptr_t) noexcept : _state(nullptr)
+        inline explicit promise(std::nullptr_t) noexcept
         {
         }
         
@@ -1640,9 +1634,9 @@ namespace ps
     template<class T>
     class promise<T&>
     {
-        assoc_state<T&>* _state;
+        assoc_state<T&>* _state {nullptr};
         
-        inline explicit promise(std::nullptr_t) noexcept : _state(nullptr)
+        inline explicit promise(std::nullptr_t) noexcept
         {
         }
         
@@ -1768,12 +1762,12 @@ namespace ps
     template<>
     class promise<void>
     {
-        assoc_sub_state* _state;
+        assoc_sub_state* _state {nullptr};
         
-        inline explicit promise(std::nullptr_t) noexcept : _state(nullptr)
+        inline explicit promise(std::nullptr_t) noexcept
         {
         }
-        
+
         template<class>
         friend class packaged_task;
         
@@ -2548,7 +2542,7 @@ namespace ps
     template<class T>
     class shared_future
     {
-        assoc_state<T>* _state{nullptr};
+        assoc_state<T>* _state {nullptr};
         
         template<typename InputIt>
         friend auto when_all(InputIt first, InputIt last) -> future<std::vector<typename std::iterator_traits<InputIt>::value_type>>;
@@ -2804,7 +2798,7 @@ namespace ps
     template<>
     class shared_future<void>
     {
-        assoc_sub_state* _state{nullptr};
+        assoc_sub_state* _state {nullptr};
         
         template<typename InputIt>
         friend auto when_all(InputIt first, InputIt last) -> future<std::vector<typename std::iterator_traits<InputIt>::value_type>>;
