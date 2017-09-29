@@ -34,7 +34,11 @@
 #include <ctime>
 #include <limits>
 #include <sys/errno.h>
+#ifdef __ANDROID__
+#include <unistd.h>
+#else
 #include <sys/sysctl.h>
+#endif
 #include <utility>
 #include <vector>
 
@@ -143,7 +147,7 @@ namespace ps
     
     thread::~thread()
     {
-        if (_t != nullptr)
+        if (_t != PS_PTHREAD_T_NULL)
         {
             std::terminate();
         }
@@ -152,12 +156,12 @@ namespace ps
     void thread::join()
     {
         int ec = EINVAL;
-        if (_t != nullptr)
+        if (_t != PS_PTHREAD_T_NULL)
         {
             ec = pthread_join(_t, nullptr);
             if (ec == 0)
             {
-                _t = nullptr;
+                _t = PS_PTHREAD_T_NULL;
             }
         }
         
@@ -170,12 +174,12 @@ namespace ps
     void thread::detach()
     {
         int ec = EINVAL;
-        if (_t != nullptr)
+        if (_t != PS_PTHREAD_T_NULL)
         {
             ec = pthread_detach(_t);
             if (ec == 0)
             {
-                _t = nullptr;
+                _t = PS_PTHREAD_T_NULL;
             }
         }
         
@@ -187,11 +191,15 @@ namespace ps
     
     unsigned thread::hardware_concurrency() noexcept
     {
+#ifdef __ANDROID__
+        return sysconf(_SC_NPROCESSORS_ONLN);
+#else
         unsigned n;
         int mib[2] = {CTL_HW, HW_NCPU};
         std::size_t s = sizeof(n);
         sysctl(mib, 2, &n, &s, nullptr, 0);
         return n;
+#endif
     }
     
     namespace this_thread

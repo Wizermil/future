@@ -125,6 +125,13 @@ namespace ps
     
     class thread;
     class thread_id;
+
+#ifdef __ANDROID__
+#define PS_PTHREAD_T_NULL 0
+#else
+#define PS_PTHREAD_T_NULL nullptr
+#endif
+
     
     namespace this_thread
     {
@@ -136,7 +143,7 @@ namespace ps
         // FIXME: pthread_t is a pointer on Darwin but a long on Linux.
         // NULL is the no-thread value on Darwin.  Someone needs to check
         // on other platforms.  We assume 0 works everywhere for now.
-        pthread_t _id{nullptr};
+        pthread_t _id{PS_PTHREAD_T_NULL};
         
     public:
         inline thread_id() noexcept = default;
@@ -192,15 +199,13 @@ namespace ps
     
     class thread
     {
-        pthread_t _t {nullptr};
+        pthread_t _t {PS_PTHREAD_T_NULL};
         
     public:
         using id = thread_id;
         using native_handle_type = pthread_t;
         
-        inline thread() noexcept : _t(nullptr)
-        {
-        }
+        inline thread() noexcept = default;
         
         template<class F, class ...Args, class = typename std::enable_if_t<!std::is_same_v<typename std::decay_t<F>, thread>>>
         explicit thread(F&& f, Args&&... args);
@@ -210,7 +215,7 @@ namespace ps
         thread& operator=(const thread&) = delete;
         inline thread(thread&& t) noexcept : _t(t._t)
         {
-            t._t = nullptr;
+            t._t = PS_PTHREAD_T_NULL;
         }
         inline thread& operator=(thread&& t) noexcept;
         
@@ -221,7 +226,7 @@ namespace ps
         
         inline bool joinable() const noexcept
         {
-            return !(_t == nullptr);
+            return !(_t == PS_PTHREAD_T_NULL);
         }
         void join();
         void detach();
@@ -277,12 +282,12 @@ namespace ps
     
     inline thread& thread::operator=(thread&& t) noexcept
     {
-        if (_t != nullptr)
+        if (_t != PS_PTHREAD_T_NULL)
         {
             std::terminate();
         }
         _t = t._t;
-        t._t = nullptr;
+        t._t = PS_PTHREAD_T_NULL;
         return *this;
     }
     

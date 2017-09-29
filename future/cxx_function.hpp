@@ -16,7 +16,7 @@
 
 namespace cxx_function {
 
-#if __cplusplus > 201610
+#if __cplusplus > 201610 && !defined(__ANDROID__)
     template< typename t >
     using in_place_t = std::in_place_type_t< t >;
 
