@@ -43,7 +43,6 @@
 #include <exception>
 #include <functional>
 #include <iterator>
-#include <memory>
 #include <mutex>
 #include <queue>
 #include <stdexcept>
@@ -235,12 +234,12 @@ namespace ps
         {
             _status |= deferred;
         }
-
+        
         inline void set_queued()
         {
             _status |= queued;
         }
-
+        
         inline void set_thread_pool()
         {
             _status |= thread_pool;
@@ -308,7 +307,7 @@ namespace ps
         using R = typename future_held<future_then_ret_t<T, F, Arg>>::type;
         promise<R> prom;
         auto ret = prom.get_future();
-
+        
         then_error([fut = std::forward<Arg>(future), p = std::move(prom), f = std::forward<F>(func)](const std::exception_ptr& exception) mutable {
             if (exception != nullptr)
             {
@@ -761,9 +760,9 @@ namespace ps
         wait();
         base::on_zero_shared();
     }
-
+    
     // queued_assoc_state
-
+    
     class async_queued
     {
         std::queue<assoc_sub_state*> _tasks;
@@ -774,17 +773,17 @@ namespace ps
     public:
         async_queued();
         ~async_queued();
-
+        
         void post(assoc_sub_state* state);
-
+        
         void stop();
-
+        
     private:
         void start();
     };
-
+    
     // thread_pool_assoc_state
-
+    
     class async_thread_worker
     {
         ps::thread _thread;
@@ -797,24 +796,24 @@ namespace ps
     public:
         async_thread_worker();
         ~async_thread_worker();
-
+        
         void stop();
-
+        
         inline bool available() const
         {
             return !_has_task;
         }
-
+        
         void post(assoc_sub_state* task, const cxx_function::function<void()>& completion_cb);
-
+        
     private:
         void start_task(assoc_sub_state* task, const cxx_function::function<void()>& completion_cb);
     };
-
+    
     class async_thread_pool
     {
         using tp_type = std::vector<async_thread_worker>;
-
+        
         tp_type _tp;
         std::mutex _mutex;
         std::queue<assoc_sub_state*> _task_queue;
@@ -822,16 +821,16 @@ namespace ps
         bool _stop {false};
         std::size_t _available_count;
         std::condition_variable _cond;
-
+        
     public:
         async_thread_pool();
         ~async_thread_pool();
-
+        
         inline std::size_t available() const
         {
             return _available_count;
         }
-
+        
         void post(assoc_sub_state* task);
     };
     
@@ -874,11 +873,11 @@ namespace ps
         template<typename InputIt>
         friend auto when_all(InputIt first, InputIt last) -> future<std::vector<typename std::iterator_traits<InputIt>::value_type>>;
         template<std::size_t I, typename Context, typename Future>
-        friend void __attribute__((__visibility__("hidden"))) when_inner_helper(Context context, Future&& f);
+        friend void __attribute__((__visibility__("hidden"))) when_inner_helper(Context* context, Future&& f);
         template<typename InputIt>
         friend auto when_any(InputIt first, InputIt last) -> future<when_any_result<std::vector<typename std::iterator_traits<InputIt>::value_type>>>;
         template<size_t I, typename Context>
-        friend void __attribute__((__visibility__("hidden"))) when_any_inner_helper(Context context);
+        friend void __attribute__((__visibility__("hidden"))) when_any_inner_helper(Context* context);
         template<class R>
         friend std::conditional_t<is_reference_wrapper<std::decay_t<R>>::value, future<std::decay_t<R>&>, future<std::decay_t<R>>> make_ready_future(R&& value);
         friend assoc_sub_state;
@@ -1008,11 +1007,11 @@ namespace ps
         template<typename InputIt>
         friend auto when_all(InputIt first, InputIt last) -> future<std::vector<typename std::iterator_traits<InputIt>::value_type>>;
         template<std::size_t I, typename Context, typename Future>
-        friend void __attribute__((__visibility__("hidden"))) when_inner_helper(Context context, Future&& f);
+        friend void __attribute__((__visibility__("hidden"))) when_inner_helper(Context* context, Future&& f);
         template<typename InputIt>
         friend auto when_any(InputIt first, InputIt last) -> future<when_any_result<std::vector<typename std::iterator_traits<InputIt>::value_type>>>;
         template<size_t I, typename Context>
-        friend void __attribute__((__visibility__("hidden"))) when_any_inner_helper(Context context);
+        friend void __attribute__((__visibility__("hidden"))) when_any_inner_helper(Context* context);
         template<class R>
         friend std::conditional_t<is_reference_wrapper<std::decay_t<R>>::value, future<std::decay_t<R>&>, future<std::decay_t<R>>> make_ready_future(R&& value);
         friend assoc_sub_state;
@@ -1142,11 +1141,11 @@ namespace ps
         template<typename InputIt>
         friend auto when_all(InputIt first, InputIt last) -> future<std::vector<typename std::iterator_traits<InputIt>::value_type>>;
         template<std::size_t I, typename Context, typename Future>
-        friend void __attribute__((__visibility__("hidden"))) when_inner_helper(Context context, Future&& f);
+        friend void __attribute__((__visibility__("hidden"))) when_inner_helper(Context* context, Future&& f);
         template<typename InputIt>
         friend auto when_any(InputIt first, InputIt last) -> future<when_any_result<std::vector<typename std::iterator_traits<InputIt>::value_type>>>;
         template<size_t I, typename Context>
-        friend void __attribute__((__visibility__("hidden"))) when_any_inner_helper(Context context);
+        friend void __attribute__((__visibility__("hidden"))) when_any_inner_helper(Context* context);
         friend future<void> make_ready_future();
         friend assoc_sub_state;
         
@@ -1328,7 +1327,7 @@ namespace ps
         {
             throw_future_error(future_errc::no_state);
         }
-        _state->set_value(std::move(r));
+        _state->set_value(std::forward<T>(r));
     }
     
     template<class T>
@@ -1359,7 +1358,7 @@ namespace ps
         {
             throw_future_error(future_errc::no_state);
         }
-        _state->set_value_at_thread_exit(std::move(r));
+        _state->set_value_at_thread_exit(std::forward<T>(r));
     }
     
     template<class T>
@@ -1511,7 +1510,7 @@ namespace ps
         inline explicit promise(std::nullptr_t) noexcept
         {
         }
-
+        
         template<class>
         friend class packaged_task;
         
@@ -1603,11 +1602,11 @@ namespace ps
         p.set_exception(std::make_exception_ptr(ex));
         return p.get_future();
     }
-
+    
     // packaged_task_function
-
+    
     template<class F> class packaged_task_base;
-
+    
     template<class T, class ...ArgTypes>
     class packaged_task_base<T(ArgTypes...)>
     {
@@ -1623,10 +1622,10 @@ namespace ps
         virtual void destroy_deallocate() = 0;
         virtual T operator()(ArgTypes&& ...) = 0;
     };
-
+    
     template<class, class, class>
     class packaged_task_func;
-
+    
     template<class F, class Alloc, class R, class ...ArgTypes>
     class packaged_task_func<F, Alloc, R(ArgTypes...)> : public packaged_task_base<R(ArgTypes...)>
     {
@@ -1649,19 +1648,19 @@ namespace ps
         virtual void destroy_deallocate();
         virtual R operator()(ArgTypes&& ... args);
     };
-
+    
     template<class F, class Alloc, class R, class ...ArgTypes>
     void packaged_task_func<F, Alloc, R(ArgTypes...)>::move_to(packaged_task_base<R(ArgTypes...)>* p) noexcept
     {
         new (p) packaged_task_func(std::move(_f.first()), std::move(_f.second()));
     }
-
+    
     template<class F, class Alloc, class R, class ...ArgTypes>
     void packaged_task_func<F, Alloc, R(ArgTypes...)>::destroy()
     {
         _f.~compressed_pair<F, Alloc>();
     }
-
+    
     template<class F, class Alloc, class R, class ...ArgTypes>
     void packaged_task_func<F, Alloc, R(ArgTypes...)>::destroy_deallocate()
     {
@@ -1672,26 +1671,26 @@ namespace ps
         _f.~compressed_pair<F, Alloc>();
         a.deallocate(PTraits::pointer_to(*this), 1);
     }
-
+    
     template<class F, class Alloc, class R, class ...ArgTypes>
     R packaged_task_func<F, Alloc, R(ArgTypes...)>::operator()(ArgTypes&& ... args)
     {
         return ps::invoke(_f.first(), std::forward<ArgTypes>(args)...);
     }
-
+    
     template<class Callable>
     class packaged_task_function;
-
+    
     template<class R, class ...ArgTypes>
     class packaged_task_function<R(ArgTypes...)>
     {
         using base = packaged_task_base<R(ArgTypes...)>;
         typename std::aligned_storage<3*sizeof(void*)>::type _buf;
         base* _f;
-
+        
     public:
         using result_type = R;
-
+        
         inline packaged_task_function() noexcept : _f(nullptr)
         {
         }
@@ -1699,20 +1698,20 @@ namespace ps
         packaged_task_function(F&& f);
         template<class F, class Alloc>
         packaged_task_function(std::allocator_arg_t /*unused*/, const Alloc& a0, F&& f);
-
+        
         packaged_task_function(packaged_task_function&& f) noexcept;
         packaged_task_function& operator=(packaged_task_function&& f) noexcept;
-
+        
         packaged_task_function(const packaged_task_function&) =  delete;
         packaged_task_function& operator=(const packaged_task_function&) =  delete;
-
+        
         ~packaged_task_function();
-
+        
         void swap(packaged_task_function& f) noexcept;
-
+        
         inline R operator()(ArgTypes... args) const;
     };
-
+    
     template<class R, class ...ArgTypes>
     packaged_task_function<R(ArgTypes...)>::packaged_task_function(packaged_task_function&& f) noexcept
     {
@@ -1731,7 +1730,7 @@ namespace ps
             f._f = nullptr;
         }
     }
-
+    
     template<class R, class ...ArgTypes>
     template<class F>
     packaged_task_function<R(ArgTypes...)>::packaged_task_function(F&& f) : _f(nullptr)
@@ -1753,7 +1752,7 @@ namespace ps
             _f = hold.release();
         }
     }
-
+    
     template<class R, class ...ArgTypes>
     template<class F, class Alloc>
     packaged_task_function<R(ArgTypes...)>::packaged_task_function(std:: allocator_arg_t /*unused*/, const Alloc& a0, F&& f) : _f(nullptr)
@@ -1775,7 +1774,7 @@ namespace ps
             _f = std::addressof(*hold.release());
         }
     }
-
+    
     template<class R, class ...ArgTypes>
     packaged_task_function<R(ArgTypes...)>& packaged_task_function<R(ArgTypes...)>::operator=(packaged_task_function&& f) noexcept
     {
@@ -1787,7 +1786,7 @@ namespace ps
         {
             _f->destroy_deallocate();
         }
-
+        
         _f = nullptr;
         if (f._f == nullptr)
         {
@@ -1805,7 +1804,7 @@ namespace ps
         }
         return *this;
     }
-
+    
     template<class R, class ...ArgTypes>
     packaged_task_function<R(ArgTypes...)>::~packaged_task_function()
     {
@@ -1818,7 +1817,7 @@ namespace ps
             _f->destroy_deallocate();
         }
     }
-
+    
     template<class R, class ...ArgTypes>
     void packaged_task_function<R(ArgTypes...)>::swap(packaged_task_function& f) noexcept
     {
@@ -1856,7 +1855,7 @@ namespace ps
             std::swap(_f, f._f);
         }
     }
-
+    
     template<class R, class ...ArgTypes>
     inline R packaged_task_function<R(ArgTypes...)>::operator()(ArgTypes... args) const
     {
@@ -2109,9 +2108,9 @@ namespace ps
         ps::thread(&async_assoc_state<T, F>::execute, h.get()).detach();
         return future<T>(h.get());
     }
-
+    
     async_queued& get_async_queued();
-
+    
     template<class T, class F>
     future<T> make_queued_assoc_state(F&& f)
     {
@@ -2121,9 +2120,9 @@ namespace ps
         queue.post(h.get());
         return future<T>(h.get());
     }
-
+    
     async_thread_pool& get_async_thread_pool();
-
+    
     template<class T, class F>
     future<T> make_thread_pool_assoc_state(F&& f)
     {
@@ -2192,7 +2191,7 @@ namespace ps
     {
         using R = typename future_held<future_async_ret_t<F, Args...>>::type;
         using BF = async_func<R, std::decay_t<F>, std::decay_t<Args>...>;
-
+        
         if (does_policy_contain(policy, launch::queued))
         {
             return make_queued_assoc_state<R>(BF(decay_copy(f), decay_copy(args)...));
@@ -2247,7 +2246,7 @@ namespace ps
             std::exception_ptr e = nullptr;
         };
         
-        auto shared_context = std::make_shared<context_all>();
+        auto shared_context = new context_all;
         auto result_future = shared_context->p.get_future();
         shared_context->total_futures = std::distance(first, last);
         shared_context->result.reserve(shared_context->total_futures);
@@ -2274,6 +2273,7 @@ namespace ps
                     {
                         shared_context->p.set_value(std::move(shared_context->result));
                     }
+                    delete shared_context;
                 }
             });
         }
@@ -2282,7 +2282,7 @@ namespace ps
     }
     
     template<std::size_t I, typename Context, typename Future>
-    void __attribute__((__visibility__("hidden"))) when_inner_helper(Context context, Future&& f)
+    void __attribute__((__visibility__("hidden"))) when_inner_helper(Context* context, Future&& f)
     {
         std::get<I>(context->result) = std::forward<Future>(f);
         std::get<I>(context->result).then_error([context](const std::exception_ptr exception) {
@@ -2302,17 +2302,18 @@ namespace ps
                 {
                     context->p.set_value(std::move(context->result));
                 }
+                delete context;
             }
         });
     }
     
     template<std::size_t I, typename Context>
-    void __attribute__((__visibility__("hidden"))) apply_helper(const Context& /*unused*/)
+    void __attribute__((__visibility__("hidden"))) apply_helper(Context* /*unused*/)
     {
     }
     
     template<std::size_t I, typename Context, typename FirstFuture, typename... Futures>
-    void __attribute__((__visibility__("hidden"))) apply_helper(const Context& context, FirstFuture&& f, Futures&&... fs)
+    void __attribute__((__visibility__("hidden"))) apply_helper(Context* context, FirstFuture&& f, Futures&&... fs)
     {
         when_inner_helper<I>(context, std::forward<FirstFuture>(f));
         apply_helper<I+1>(context, std::forward<Futures>(fs)...);
@@ -2331,10 +2332,11 @@ namespace ps
             std::mutex mutex;
             std::exception_ptr e = nullptr;
         };
-        auto shared_context = std::make_shared<context_all>();
+        auto shared_context = new context_all;
+        auto ret = shared_context->p.get_future();
         shared_context->total_futures = sizeof...(futures);
         apply_helper<0>(shared_context, std::forward<Futures>(futures)...);
-        return shared_context->p.get_future();
+        return ret;
     }
     
     // when_any
@@ -2354,7 +2356,8 @@ namespace ps
         
         struct context_any
         {
-            size_t total = 0;
+            std::size_t total_futures = 0;
+            std::size_t ready_futures = 0;
             std::size_t processed = 0;
             std::size_t failled = 0;
             future_inner_type result;
@@ -2365,16 +2368,17 @@ namespace ps
             std::exception_ptr e = nullptr;
         };
         
-        auto shared_context = std::make_shared<context_any>();
+        auto shared_context = new context_any;
         auto result_future = shared_context->p.get_future();
-        shared_context->total = std::distance(first, last);
-        shared_context->result.sequence.reserve(shared_context->total);
+        shared_context->total_futures = std::distance(first, last);
+        shared_context->result.sequence.reserve(shared_context->total_futures);
         
         for (size_t index = 0; first != last; ++first, ++index)
         {
             shared_context->result.sequence.push_back(std::move(*first));
             shared_context->result.sequence[index].then_error([shared_context, index](const std::exception_ptr exception) {
                 std::lock_guard<std::mutex> lock(shared_context->mutex);
+                ++shared_context->ready_futures;
                 if (exception != nullptr)
                 {
                     ++shared_context->failled;
@@ -2392,10 +2396,10 @@ namespace ps
                         shared_context->result.index = index;
                     }
                     
-                    if (shared_context->processed == shared_context->total && !shared_context->result_moved && (exception == nullptr || shared_context->failled == shared_context->total))
+                    if (shared_context->processed == shared_context->total_futures && !shared_context->result_moved && (exception == nullptr || shared_context->failled == shared_context->total_futures))
                     {
                         shared_context->result_moved = true;
-                        if (shared_context->failled == shared_context->total)
+                        if (shared_context->failled == shared_context->total_futures)
                         {
                             shared_context->p.set_exception(shared_context->e);
                         }
@@ -2405,21 +2409,32 @@ namespace ps
                         }
                     }
                 }
+                
+                if (shared_context->processed == shared_context->total_futures && shared_context->ready_futures == shared_context->total_futures)
+                {
+                    delete shared_context;
+                }
             });
             ++shared_context->processed;
         }
         
-        std::lock_guard<std::mutex> lock(shared_context->mutex);
-        if ((shared_context->ready || shared_context->failled == shared_context->total) && !shared_context->result_moved)
         {
-            shared_context->result_moved = true;
-            if (shared_context->failled == shared_context->total)
+            std::lock_guard<std::mutex> lock(shared_context->mutex);
+            if ((shared_context->ready || shared_context->failled == shared_context->total_futures) && !shared_context->result_moved)
             {
-                shared_context->p.set_exception(shared_context->e);
-            }
-            else
-            {
-                shared_context->p.set_value(std::move(shared_context->result));
+                shared_context->result_moved = true;
+                if (shared_context->failled == shared_context->total_futures)
+                {
+                    shared_context->p.set_exception(shared_context->e);
+                }
+                else
+                {
+                    shared_context->p.set_value(std::move(shared_context->result));
+                }
+                if (shared_context->ready_futures == shared_context->total_futures)
+                {
+                    delete shared_context;
+                }
             }
         }
         
@@ -2427,10 +2442,11 @@ namespace ps
     }
     
     template<size_t I, typename Context>
-    void __attribute__((__visibility__("hidden"))) when_any_inner_helper(Context context)
+    void __attribute__((__visibility__("hidden"))) when_any_inner_helper(Context* context)
     {
         std::get<I>(context->result.sequence).then_error([context](const std::exception_ptr exception) {
             std::lock_guard<std::mutex> lock(context->mutex);
+            ++context->ready_futures;
             if (exception != nullptr)
             {
                 ++context->failled;
@@ -2449,10 +2465,10 @@ namespace ps
                     context->result.index = I;
                 }
                 
-                if (context->processed == context->total && !context->result_moved && (exception == nullptr || context->failled == context->total))
+                if (context->processed == context->total_futures && !context->result_moved && (exception == nullptr || context->failled == context->total_futures))
                 {
                     context->result_moved = true;
-                    if (context->failled == context->total)
+                    if (context->failled == context->total_futures)
                     {
                         context->p.set_exception(context->e);
                     }
@@ -2462,6 +2478,10 @@ namespace ps
                     }
                 }
             }
+            if (context->processed == context->total_futures && context->ready_futures == context->total_futures)
+            {
+                delete context;
+            }
         });
     }
     
@@ -2469,7 +2489,7 @@ namespace ps
     struct __attribute__((__visibility__("hidden"))) when_any_helper_struct
     {
         template<typename Context, typename... Futures>
-        static void apply(const Context& context, std::tuple<Futures...>& t)
+        static void apply(Context* context, std::tuple<Futures...>& t)
         {
             when_any_inner_helper<I>(context);
             ++context->processed;
@@ -2481,18 +2501,18 @@ namespace ps
     struct __attribute__((__visibility__("hidden"))) when_any_helper_struct<S, S>
     {
         template<typename Context, typename... Futures>
-        static void apply(const Context& /*unused*/, std::tuple<Futures...>& /*unused*/)
+        static void apply(Context* /*unused*/, std::tuple<Futures...>& /*unused*/)
         {
         }
     };
     
     template<size_t I, typename Context>
-    void __attribute__((__visibility__("hidden"))) fill_result_helper(const Context& /*unused*/)
+    void __attribute__((__visibility__("hidden"))) fill_result_helper(Context* /*unused*/)
     {
     }
     
     template<size_t I, typename Context, typename FirstFuture, typename... Futures>
-    void __attribute__((__visibility__("hidden"))) fill_result_helper(const Context& context, FirstFuture&& f, Futures&&... fs)
+    void __attribute__((__visibility__("hidden"))) fill_result_helper(Context* context, FirstFuture&& f, Futures&&... fs)
     {
         std::get<I>(context->result.sequence) = std::forward<FirstFuture>(f);
         fill_result_helper<I+1>(context, std::forward<Futures>(fs)...);
@@ -2506,7 +2526,8 @@ namespace ps
         
         struct context_any
         {
-            size_t total = 0;
+            std::size_t total_futures = 0;
+            std::size_t ready_futures = 0;
             std::atomic<std::size_t> processed = 0;
             std::size_t failled = 0;
             future_inner_type result;
@@ -2517,17 +2538,18 @@ namespace ps
             std::exception_ptr e = nullptr;
         };
         
-        auto shared_context = std::make_shared<context_any>();
-        shared_context->total = sizeof...(futures);
+        auto shared_context = new context_any;
+        auto ret = shared_context->p.get_future();
+        shared_context->total_futures = sizeof...(futures);
         
         fill_result_helper<0>(shared_context, std::forward<Futures>(futures)...);
         when_any_helper_struct<0, sizeof...(futures)>::apply(shared_context, shared_context->result.sequence);
         {
             std::lock_guard<std::mutex> lock(shared_context->mutex);
-            if ((shared_context->ready || shared_context->failled == shared_context->total) && !shared_context->result_moved)
+            if ((shared_context->ready || shared_context->failled == shared_context->total_futures) && !shared_context->result_moved)
             {
                 shared_context->result_moved = true;
-                if (shared_context->failled == shared_context->total)
+                if (shared_context->failled == shared_context->total_futures)
                 {
                     shared_context->p.set_exception(shared_context->e);
                 }
@@ -2536,8 +2558,12 @@ namespace ps
                     shared_context->p.set_value(std::move(shared_context->result));
                 }
             }
+            if (shared_context->ready_futures == shared_context->total_futures)
+            {
+                delete shared_context;
+            }
         }
-        return shared_context->p.get_future();
+        return ret;
     }
     
     // shared_future
@@ -2550,7 +2576,7 @@ namespace ps
         template<typename InputIt>
         friend auto when_all(InputIt first, InputIt last) -> future<std::vector<typename std::iterator_traits<InputIt>::value_type>>;
         template<std::size_t I, typename Context, typename Future>
-        friend void __attribute__((__visibility__("hidden"))) when_inner_helper(Context context, Future&& f);
+        friend void __attribute__((__visibility__("hidden"))) when_inner_helper(Context* context, Future&& f);
         
         void then_error(cxx_function::unique_function<void(const std::exception_ptr&)>&& continuation);
         
@@ -2679,7 +2705,7 @@ namespace ps
         template<typename InputIt>
         friend auto when_all(InputIt first, InputIt last) -> future<std::vector<typename std::iterator_traits<InputIt>::value_type>>;
         template<std::size_t I, typename Context, typename Future>
-        friend void __attribute__((__visibility__("hidden"))) when_inner_helper(Context context, Future&& f);
+        friend void __attribute__((__visibility__("hidden"))) when_inner_helper(Context* context, Future&& f);
         
         void then_error(cxx_function::unique_function<void(const std::exception_ptr&)>&& continuation);
         
@@ -2806,7 +2832,7 @@ namespace ps
         template<typename InputIt>
         friend auto when_all(InputIt first, InputIt last) -> future<std::vector<typename std::iterator_traits<InputIt>::value_type>>;
         template<std::size_t I, typename Context, typename Future>
-        friend void __attribute__((__visibility__("hidden"))) when_inner_helper(Context context, Future&& f);
+        friend void __attribute__((__visibility__("hidden"))) when_inner_helper(Context* context, Future&& f);
         
         void then_error(cxx_function::unique_function<void(const std::exception_ptr&)>&& continuation);
         
@@ -2919,3 +2945,4 @@ namespace std
 } // namespace std
 
 #endif // FUTURE_FUTURE_HPP
+
