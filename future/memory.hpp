@@ -32,6 +32,7 @@
 
 #include "tuple.hpp"
 #include "type_traits.hpp"
+#include <atomic>
 #include <cstddef>
 #include <memory>
 #include <tuple>
@@ -46,7 +47,7 @@ namespace ps
     class shared_count
     {
     protected:
-        std::int64_t _shared_owners;
+        std::atomic<std::int64_t> _shared_owners {0};
         virtual ~shared_count();
         
     private:
@@ -63,12 +64,12 @@ namespace ps
         
         inline void add_shared() noexcept
         {
-            __atomic_add_fetch(&_shared_owners, 1, __ATOMIC_RELAXED);
+            _shared_owners.fetch_add(1, std::memory_order_relaxed);
         }
         
         inline bool release_shared() noexcept
         {
-            if (__atomic_add_fetch(&_shared_owners, -1, __ATOMIC_ACQ_REL) == -1)
+            if (_shared_owners.fetch_add(-1, std::memory_order_acq_rel) == 0)
             {
                 on_zero_shared();
                 return true;
@@ -78,7 +79,7 @@ namespace ps
         
         inline std::int64_t use_count() const noexcept
         {
-            return __atomic_load_n(&_shared_owners, __ATOMIC_RELAXED) + 1;
+            return _shared_owners.load(std::memory_order_relaxed) + 1;
         }
     };
     
