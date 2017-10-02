@@ -56,6 +56,11 @@ namespace ps
         nat& operator=(nat&&) noexcept = delete;
         ~nat() = delete;
     };
+
+    struct two
+    {
+        char __lx[2];
+    };
     
     struct any
     {
@@ -215,35 +220,35 @@ namespace ps
     class DecayF = std::decay_t<F>,
     class DecayA0 = std::decay_t<A0>,
     class ClassT = typename member_pointer_class_type<DecayF>::type>
-    using enable_if_bullet1 = std::enable_if_t<std::is_member_function_pointer_v<DecayF> && std::is_base_of_v<ClassT, DecayA0>>;
+    using enable_if_bullet1 = std::enable_if_t<std::is_member_function_pointer<DecayF>::value && std::is_base_of<ClassT, DecayA0>::value>;
     
     template<class F, class A0,
     class DecayF = std::decay_t<F>,
     class DecayA0 = std::decay_t<A0>>
-    using enable_if_bullet2 = std::enable_if_t<std::is_member_function_pointer_v<DecayF> && is_reference_wrapper<DecayA0>::value>;
+    using enable_if_bullet2 = std::enable_if_t<std::is_member_function_pointer<DecayF>::value && is_reference_wrapper<DecayA0>::value>;
     
     template<class F, class A0,
     class DecayF = std::decay_t<F>,
     class DecayA0 = std::decay_t<A0>,
     class ClassT = typename member_pointer_class_type<DecayF>::type>
-    using enable_if_bullet3 = std::enable_if_t<std::is_member_function_pointer_v<DecayF> && !std::is_base_of_v<ClassT, DecayA0> && !is_reference_wrapper<DecayA0>::value>;
+    using enable_if_bullet3 = std::enable_if_t<std::is_member_function_pointer<DecayF>::value && !std::is_base_of<ClassT, DecayA0>::value && !is_reference_wrapper<DecayA0>::value>;
     
     template<class F, class A0,
     class DecayF = std::decay_t<F>,
     class DecayA0 = std::decay_t<A0>,
     class ClassT = typename member_pointer_class_type<DecayF>::type>
-    using enable_if_bullet4 = std::enable_if_t<std::is_member_object_pointer_v<DecayF> && std::is_base_of_v<ClassT, DecayA0>>;
+    using enable_if_bullet4 = std::enable_if_t<std::is_member_object_pointer<DecayF>::value && std::is_base_of<ClassT, DecayA0>::value>;
     
     template<class F, class A0,
     class DecayF = std::decay_t<F>,
     class DecayA0 = std::decay_t<A0>>
-    using enable_if_bullet5 = std::enable_if_t<std::is_member_object_pointer_v<DecayF> && is_reference_wrapper<DecayA0>::value>;
+    using enable_if_bullet5 = std::enable_if_t<std::is_member_object_pointer<DecayF>::value && is_reference_wrapper<DecayA0>::value>;
     
     template<class F, class A0,
     class DecayF = std::decay_t<F>,
     class DecayA0 = std::decay_t<A0>,
     class ClassT = typename member_pointer_class_type<DecayF>::type>
-    using enable_if_bullet6 = std::enable_if_t<std::is_member_object_pointer_v<DecayF> && !std::is_base_of_v<ClassT, DecayA0> && !is_reference_wrapper<DecayA0>::value>;
+    using enable_if_bullet6 = std::enable_if_t<std::is_member_object_pointer<DecayF>::value && !std::is_base_of<ClassT, DecayA0>::value && !is_reference_wrapper<DecayA0>::value>;
     
     // invoke
     
@@ -323,13 +328,13 @@ noexcept(noexcept(__VA_ARGS__)) -> decltype(__VA_ARGS__) \
         using Result = decltype(ps::invoke(std::declval<F>(), std::declval<Args>()...));
         
         using type = typename std::conditional_t<
-        !std::is_same_v<Result, nat>,
-        typename std::conditional_t<
-        std::is_void_v<Ret>,
-        std::true_type,
-        std::is_convertible<Result, Ret>
-        >,
-        std::false_type
+        !std::is_same<Result, nat>::value,
+            typename std::conditional_t<
+                std::is_void<Ret>::value,
+                std::true_type,
+                std::is_convertible<Result, Ret>
+            >,
+            std::false_type
         >;
         static const bool value = type::value;
     };
@@ -344,6 +349,71 @@ noexcept(noexcept(__VA_ARGS__)) -> decltype(__VA_ARGS__) \
     
     template<class F, class ...Args>
     using invoke_of_t = typename invoke_of<F, Args...>::type;
+
+    // is_referenceable
+
+    struct is_referenceable_impl
+    {
+        template<class T>
+        static T& test(int);
+        template<class T>
+        static two test(...);
+    };
+
+    template<class T>
+    struct is_referenceable : std::integral_constant<bool, !std::is_same<decltype(is_referenceable_impl::test<T>(0)), two>::value>
+    {
+    };
+
+    // swappable
+
+    namespace detail
+    {
+        // ALL generic swap overloads MUST already have a declaration available at this point.
+
+        template<class T, class U = T, bool NotVoid = !std::is_void<T>::value && !std::is_void<U>::value>
+        struct swappable_with
+        {
+            template<class LHS, class RHS>
+            static decltype(std::swap(std::declval<LHS>(), std::declval<RHS>()))
+            test_swap(int);
+            template<class, class>
+            static nat test_swap(long);
+
+            // Extra parens are needed for the C++03 definition of decltype.
+            typedef decltype((test_swap<T, U>(0))) swap1;
+            typedef decltype((test_swap<U, T>(0))) swap2;
+
+            static const bool value = !std::is_same<swap1, nat>::value && !std::is_same<swap2, nat>::value;
+        };
+
+        template<class T, class U>
+        struct swappable_with<T, U, false> : std::false_type
+        {
+        };
+
+        template<class T, class U = T, bool Swappable = swappable_with<T, U>::value>
+        struct nothrow_swappable_with
+        {
+            static const bool value = noexcept(std::swap(std::declval<T>(), std::declval<U>())) &&  noexcept(std::swap(std::declval<U>(), std::declval<T>()));
+        };
+
+        template<class T, class U>
+        struct nothrow_swappable_with<T, U, false> : std::false_type
+        {
+        };
+
+    }  // namespace detail
+
+    template<class T, class U>
+    struct is_nothrow_swappable_with : public std::integral_constant<bool, detail::nothrow_swappable_with<T, U>::value>
+    {
+    };
+
+    template<class T>
+    struct is_nothrow_swappable : public std::conditional<is_referenceable<T>::value, is_nothrow_swappable_with<typename std::add_lvalue_reference<T>::type, typename std::add_lvalue_reference<T>::type>, std::false_type>::type
+    {
+    };
     
 } // namespace ps
 

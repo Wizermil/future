@@ -207,7 +207,7 @@ namespace ps
         
         inline thread() noexcept = default;
         
-        template<class F, class ...Args, class = typename std::enable_if_t<!std::is_same_v<typename std::decay_t<F>, thread>>>
+        template<class F, class ...Args, class = typename std::enable_if_t<!std::is_same<typename std::decay_t<F>, thread>::value>>
         explicit thread(F&& f, Args&&... args);
         ~thread();
         

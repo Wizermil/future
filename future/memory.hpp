@@ -281,7 +281,7 @@ namespace ps
             return static_cast<Base2 const&>(*this).get();
         }
         
-        inline void swap(compressed_pair& x) noexcept(std::is_nothrow_swappable<T1>::value && std::is_nothrow_swappable<T2>::value)
+        inline void swap(compressed_pair& x) noexcept(is_nothrow_swappable<T1>::value && is_nothrow_swappable<T2>::value)
         {
             std::swap(first(), x.first());
             std::swap(second(), x.second());
@@ -289,7 +289,7 @@ namespace ps
     };
     
     template<class T1, class T2>
-    inline void swap(compressed_pair<T1, T2>& x, compressed_pair<T1, T2>& y) noexcept(std::is_nothrow_swappable<T1>::value && std::is_nothrow_swappable<T2>::value)
+    inline void swap(compressed_pair<T1, T2>& x, compressed_pair<T1, T2>& y) noexcept(is_nothrow_swappable<T1>::value && is_nothrow_swappable<T2>::value)
     {
         x.swap(y);
     }

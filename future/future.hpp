@@ -213,6 +213,7 @@ namespace ps
         };
         
         inline assoc_sub_state() = default;
+        virtual ~assoc_sub_state() = default;
         
         inline bool has_value() const
         {
@@ -317,7 +318,7 @@ namespace ps
             {
                 try
                 {
-                    if constexpr(std::is_void_v<R> && is_future<future_then_ret_t<T, F, Arg>>::value)
+                    if constexpr(std::is_void<R>::value && is_future<future_then_ret_t<T, F, Arg>>::value)
                     {
                         ps::invoke(std::forward<F>(f), std::forward<Arg>(fut)).then_error([prom_fut = std::move(p)](const std::exception_ptr& except) mutable {
                             if (except == nullptr)
@@ -330,16 +331,16 @@ namespace ps
                             }
                         });
                     }
-                    else if constexpr(std::is_void_v<R> && !is_future<future_then_ret_t<T, F, Arg>>::value)
+                    else if constexpr(std::is_void<R>::value && !is_future<future_then_ret_t<T, F, Arg>>::value)
                     {
                         ps::invoke(std::forward<F>(f), std::forward<Arg>(fut));
                         p.set_value();
                     }
-                    else if constexpr(!std::is_void_v<R> && !is_future<future_then_ret_t<T, F, Arg>>::value)
+                    else if constexpr(!std::is_void<R>::value && !is_future<future_then_ret_t<T, F, Arg>>::value)
                     {
                         p.set_value(ps::invoke(std::forward<F>(f), std::forward<Arg>(fut)));
                     }
-                    else if constexpr(!std::is_void_v<R> && is_future<future_then_ret_t<T, F, Arg>>::value)
+                    else if constexpr(!std::is_void<R>::value && is_future<future_then_ret_t<T, F, Arg>>::value)
                     {
                         auto fut_then = ps::invoke(std::forward<F>(f), std::forward<Arg>(fut));
                         fut_then._state->add_shared();
@@ -2528,7 +2529,7 @@ namespace ps
         {
             std::size_t total_futures = 0;
             std::size_t ready_futures = 0;
-            std::atomic<std::size_t> processed = 0;
+            std::atomic<std::size_t> processed {0};
             std::size_t failled = 0;
             future_inner_type result;
             promise<future_inner_type> p;

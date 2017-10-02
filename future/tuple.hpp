@@ -69,12 +69,12 @@ namespace ps
     using enable_if_tuple_size_imp = T;
     
     template<class T>
-    class tuple_size<enable_if_tuple_size_imp<const T, typename std::enable_if_t<!std::is_volatile_v<T>>, std::integral_constant<std::size_t, sizeof(tuple_size<T>)>>> : public std::integral_constant<std::size_t, tuple_size<T>::value>
+    class tuple_size<enable_if_tuple_size_imp<const T, typename std::enable_if_t<!std::is_volatile<T>::value>, std::integral_constant<std::size_t, sizeof(tuple_size<T>)>>> : public std::integral_constant<std::size_t, tuple_size<T>::value>
     {
     };
     
     template<class T>
-    class tuple_size<enable_if_tuple_size_imp<volatile T, typename std::enable_if_t<!std::is_const_v<T>>, std::integral_constant<std::size_t, sizeof(tuple_size<T>)>>> : public std::integral_constant<std::size_t, tuple_size<T>::value>
+    class tuple_size<enable_if_tuple_size_imp<volatile T, typename std::enable_if_t<!std::is_const<T>::value>, std::integral_constant<std::size_t, sizeof(tuple_size<T>)>>> : public std::integral_constant<std::size_t, tuple_size<T>::value>
     {
     };
     
