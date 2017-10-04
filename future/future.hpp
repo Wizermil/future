@@ -318,6 +318,8 @@ namespace ps
             {
                 try
                 {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc++1z-extensions"
                     if constexpr(std::is_void<R>::value && is_future<future_then_ret_t<T, F, Arg>>::value)
                     {
                         ps::invoke(std::forward<F>(f), std::forward<Arg>(fut)).then_error([prom_fut = std::move(p)](const std::exception_ptr& except) mutable {
@@ -358,6 +360,7 @@ namespace ps
                             t->release_shared();
                         });
                     }
+#pragma clang diagnostic pop
                 }
                 catch(...)
                 {
@@ -1570,6 +1573,8 @@ namespace ps
     std::conditional_t<is_reference_wrapper<std::decay_t<T>>::value, future<std::decay_t<T>&>, future<std::decay_t<T>>> make_ready_future(T&& value)
     {
         using X = std::decay_t<T>;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc++1z-extensions"
         if constexpr(is_reference_wrapper<X>::value)
         {
             auto state = new assoc_state<X&>();
@@ -1582,6 +1587,7 @@ namespace ps
             state->set_value(std::forward<T>(value));
             return future<X>(state);
         }
+#pragma clang diagnostic pop
     }
     
     future<void> make_ready_future();
@@ -2171,6 +2177,8 @@ namespace ps
         template<std::size_t ...Indices>
         R execute(tuple_indices<Indices...> /*unused*/)
         {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc++1z-extensions"
             if constexpr(is_future<future_async_ret_t<F, Args...>>::value)
             {
                 return ps::invoke(std::move(std::get<0>(_f)), std::move(std::get<Indices>(_f))...).get();
@@ -2179,6 +2187,7 @@ namespace ps
             {
                 return ps::invoke(std::move(std::get<0>(_f)), std::move(std::get<Indices>(_f))...);
             }
+#pragma clang diagnostic pop
         }
     };
     

@@ -76,7 +76,7 @@ namespace ps
         pthread_key_t _key{0};
         
         // Only thread_local_data() may construct a thread_specific_ptr and only with T == thread_struct.
-        static_assert((std::is_same<T, thread_struct>::value));
+        static_assert((std::is_same<T, thread_struct>::value), "");
         thread_specific_ptr()
         {
             int ec = pthread_key_create(&_key, &thread_specific_ptr::at_thread_exit);
