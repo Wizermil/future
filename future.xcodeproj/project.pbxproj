@@ -18,6 +18,16 @@
 		2280E4AD1F544073004E5D82 /* test_launch.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2280E4AC1F544073004E5D82 /* test_launch.mm */; };
 		2280E4AF1F54499B004E5D82 /* test_future.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2280E4AE1F54499B004E5D82 /* test_future.mm */; };
 		2280E4B11F546A02004E5D82 /* test_packaged_task_function.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2280E4B01F546A02004E5D82 /* test_packaged_task_function.mm */; };
+		22A963A91F862F59002EF489 /* debug.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 22FDFB631F50D89E00B60E42 /* debug.cpp */; };
+		22A963AA1F862F59002EF489 /* future.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2251AA3E1F4F0C9200423F6C /* future.cpp */; };
+		22A963AB1F862F59002EF489 /* memory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 22BC43141F501A330008AEC5 /* memory.cpp */; };
+		22A963AC1F862F59002EF489 /* system_error.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 22BC43281F5055F50008AEC5 /* system_error.cpp */; };
+		22A963AD1F862F59002EF489 /* thread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 22BC43201F502B6C0008AEC5 /* thread.cpp */; };
+		22A964291F8638B2002EF489 /* debug.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 22FDFB631F50D89E00B60E42 /* debug.cpp */; };
+		22A9642A1F8638B2002EF489 /* future.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2251AA3E1F4F0C9200423F6C /* future.cpp */; };
+		22A9642B1F8638B2002EF489 /* memory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 22BC43141F501A330008AEC5 /* memory.cpp */; };
+		22A9642C1F8638B2002EF489 /* system_error.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 22BC43281F5055F50008AEC5 /* system_error.cpp */; };
+		22A9642D1F8638B2002EF489 /* thread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 22BC43201F502B6C0008AEC5 /* thread.cpp */; };
 		22B2A67E1F7D554F0065CC72 /* cxx_function.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 22B2A67D1F7D55420065CC72 /* cxx_function.hpp */; settings = {ATTRIBUTES = (Public, ); }; };
 		22BB850E1F7E8C4B00CF95DE /* cxx_function.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 22B2A67D1F7D55420065CC72 /* cxx_function.hpp */; settings = {ATTRIBUTES = (Public, ); }; };
 		22BB850F1F7E8C5100CF95DE /* debug.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 22FDFB641F50D89E00B60E42 /* debug.hpp */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -70,6 +80,18 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		22A9639E1F862F1C002EF489 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "include/$(PRODUCT_NAME)";
+			dstSubfolderSpec = 16;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		22224E181F51767200EC34BE /* tuple.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = tuple.hpp; sourceTree = "<group>"; };
 		22224E1C1F517A9900EC34BE /* type_traits.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = type_traits.hpp; sourceTree = "<group>"; };
@@ -85,6 +107,8 @@
 		2280E4AC1F544073004E5D82 /* test_launch.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = test_launch.mm; sourceTree = "<group>"; };
 		2280E4AE1F54499B004E5D82 /* test_future.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = test_future.mm; sourceTree = "<group>"; };
 		2280E4B01F546A02004E5D82 /* test_packaged_task_function.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = test_packaged_task_function.mm; sourceTree = "<group>"; };
+		22A963A01F862F1C002EF489 /* libfuturestatic.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libfuturestatic.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		22A9641E1F863852002EF489 /* libmacfuturestatic.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libmacfuturestatic.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		22B2A67D1F7D55420065CC72 /* cxx_function.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = cxx_function.hpp; sourceTree = "<group>"; };
 		22BB85061F7E8B2300CF95DE /* future.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = future.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		22BB85201F7E8CE500CF95DE /* macfutureTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = macfutureTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -113,6 +137,20 @@
 			buildActionMask = 2147483647;
 			files = (
 				2251AA2E1F4F0C7F00423F6C /* future.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		22A9639D1F862F1C002EF489 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		22A9641B1F863852002EF489 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -150,6 +188,8 @@
 				2251AA2D1F4F0C7F00423F6C /* futureTests.xctest */,
 				22BB85061F7E8B2300CF95DE /* future.framework */,
 				22BB85201F7E8CE500CF95DE /* macfutureTests.xctest */,
+				22A963A01F862F1C002EF489 /* libfuturestatic.a */,
+				22A9641E1F863852002EF489 /* libmacfuturestatic.a */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -210,6 +250,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		22A9641C1F863852002EF489 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		22BB85031F7E8B2300CF95DE /* Headers */ = {
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
@@ -265,6 +312,40 @@
 			productReference = 2251AA2D1F4F0C7F00423F6C /* futureTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		22A9639F1F862F1C002EF489 /* futurestatic */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 22A963A61F862F1D002EF489 /* Build configuration list for PBXNativeTarget "futurestatic" */;
+			buildPhases = (
+				22A9639C1F862F1C002EF489 /* Sources */,
+				22A9639D1F862F1C002EF489 /* Frameworks */,
+				22A9639E1F862F1C002EF489 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = futurestatic;
+			productName = futurestatic;
+			productReference = 22A963A01F862F1C002EF489 /* libfuturestatic.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+		22A9641D1F863852002EF489 /* macfuturestatic */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 22A964261F863852002EF489 /* Build configuration list for PBXNativeTarget "macfuturestatic" */;
+			buildPhases = (
+				22A9641A1F863852002EF489 /* Sources */,
+				22A9641B1F863852002EF489 /* Frameworks */,
+				22A9641C1F863852002EF489 /* Headers */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = macfuturestatic;
+			productName = macfuturestatic;
+			productReference = 22A9641E1F863852002EF489 /* libmacfuturestatic.a */;
+			productType = "com.apple.product-type.library.static";
+		};
 		22BB85051F7E8B2300CF95DE /* macfuture */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 22BB850D1F7E8B2300CF95DE /* Build configuration list for PBXNativeTarget "macfuture" */;
@@ -318,6 +399,14 @@
 						CreatedOnToolsVersion = 9.0;
 						ProvisioningStyle = Automatic;
 					};
+					22A9639F1F862F1C002EF489 = {
+						CreatedOnToolsVersion = 9.0;
+						ProvisioningStyle = Automatic;
+					};
+					22A9641D1F863852002EF489 = {
+						CreatedOnToolsVersion = 9.0;
+						ProvisioningStyle = Automatic;
+					};
 					22BB85051F7E8B2300CF95DE = {
 						CreatedOnToolsVersion = 9.0;
 						ProvisioningStyle = Automatic;
@@ -344,6 +433,8 @@
 				2251AA2C1F4F0C7F00423F6C /* futureTests */,
 				22BB85051F7E8B2300CF95DE /* macfuture */,
 				22BB851F1F7E8CE500CF95DE /* macfutureTests */,
+				22A9639F1F862F1C002EF489 /* futurestatic */,
+				22A9641D1F863852002EF489 /* macfuturestatic */,
 			);
 		};
 /* End PBXProject section */
@@ -403,6 +494,30 @@
 				2280E4B11F546A02004E5D82 /* test_packaged_task_function.mm in Sources */,
 				22BDF50E1F715E68002E9323 /* test_compressed_pair.mm in Sources */,
 				2280E4AF1F54499B004E5D82 /* test_future.mm in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		22A9639C1F862F1C002EF489 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				22A963AC1F862F59002EF489 /* system_error.cpp in Sources */,
+				22A963AD1F862F59002EF489 /* thread.cpp in Sources */,
+				22A963AB1F862F59002EF489 /* memory.cpp in Sources */,
+				22A963AA1F862F59002EF489 /* future.cpp in Sources */,
+				22A963A91F862F59002EF489 /* debug.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		22A9641A1F863852002EF489 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				22A9642A1F8638B2002EF489 /* future.cpp in Sources */,
+				22A964291F8638B2002EF489 /* debug.cpp in Sources */,
+				22A9642B1F8638B2002EF489 /* memory.cpp in Sources */,
+				22A9642C1F8638B2002EF489 /* system_error.cpp in Sources */,
+				22A9642D1F8638B2002EF489 /* thread.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -677,6 +792,56 @@
 			};
 			name = Release;
 		};
+		22A963A71F862F1D002EF489 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = MWLR2HTMFW;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		22A963A81F862F1D002EF489 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = MWLR2HTMFW;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		22A964271F863852002EF489 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "Mac Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = MWLR2HTMFW;
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		22A964281F863852002EF489 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "Mac Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = MWLR2HTMFW;
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
 		22BB850B1F7E8B2300CF95DE /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -803,6 +968,24 @@
 			buildConfigurations = (
 				2251AA3C1F4F0C7F00423F6C /* Debug */,
 				2251AA3D1F4F0C7F00423F6C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		22A963A61F862F1D002EF489 /* Build configuration list for PBXNativeTarget "futurestatic" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				22A963A71F862F1D002EF489 /* Debug */,
+				22A963A81F862F1D002EF489 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		22A964261F863852002EF489 /* Build configuration list for PBXNativeTarget "macfuturestatic" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				22A964271F863852002EF489 /* Debug */,
+				22A964281F863852002EF489 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
