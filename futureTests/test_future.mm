@@ -1402,7 +1402,7 @@
         ps::this_thread::sleep_for(5ms);
         return a;
     }, 42);
-    XCTAssertFalse(fut2.is_ready());
+    XCTAssertTrue(fut2.is_ready());
     XCTAssertEqual(fut2.get(), 42);
     
     auto fut3 = ps::async(ps::launch::any, []() {
@@ -1512,7 +1512,7 @@
         ps::this_thread::sleep_for(5ms);
         i  = 42;
     });
-    XCTAssertFalse(fut2.is_ready());
+    XCTAssertTrue(fut2.is_ready());
     fut2.get();
     XCTAssertEqual(i, 42);
     
@@ -2058,7 +2058,6 @@
         ps::this_thread::sleep_for(15ms);
         return ps::async([&j]() {
             ps::this_thread::sleep_for(15ms);
-            j = 2;
             throw std::logic_error("logic_error4");
         });
     }));

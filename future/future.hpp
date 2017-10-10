@@ -200,6 +200,11 @@ namespace ps
         
         void on_zero_shared() noexcept override;
         void sub_wait(std::unique_lock<std::mutex>& lk);
+
+        template<class, class>
+        friend class async_assoc_state;
+        template<class, class>
+        friend class deferred_assoc_state;
     public:
         enum
         {
@@ -650,14 +655,40 @@ namespace ps
     template<class T, class F>
     void deferred_assoc_state<T, F>::execute()
     {
-        try
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc++1z-extensions"
+        if constexpr(is_future<invoke_of_t<std::decay_t<F>>>::value)
         {
-            this->set_value(_func());
+            auto fut = _func();
+            fut._state->add_shared();
+            this->add_shared();
+            fut.then_error([this, state = fut._state](const std::exception_ptr& exception) mutable {
+                if (exception == nullptr)
+                {
+                    state->_status &= ~assoc_sub_state::future_attached;
+                    future<T> fut_arg(state);
+                    this->set_value(fut_arg.get());
+                }
+                else
+                {
+                    this->set_exception(exception);
+                }
+                state->release_shared();
+                this->release_shared();
+            });
         }
-        catch (...)
+        else
         {
-            this->set_exception(std::current_exception());
+            try
+            {
+                this->set_value(_func());
+            }
+            catch (...)
+            {
+                this->set_exception(std::current_exception());
+            }
         }
+#pragma clang diagnostic pop
     }
     
     template<class F>
@@ -679,15 +710,39 @@ namespace ps
     template<class F>
     void deferred_assoc_state<void, F>::execute()
     {
-        try
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc++1z-extensions"
+        if constexpr(is_future<invoke_of_t<std::decay_t<F>>>::value)
         {
-            _func();
-            set_value();
+            auto fut = _func();
+            fut._state->add_shared();
+            this->add_shared();
+            fut.then_error([this, state = fut._state](const std::exception_ptr& exception) mutable {
+                if (exception == nullptr)
+                {
+                    this->set_value();
+                }
+                else
+                {
+                    this->set_exception(exception);
+                }
+                state->release_shared();
+                this->release_shared();
+            });
         }
-        catch (...)
+        else
         {
-            set_exception(std::current_exception());
+            try
+            {
+                _func();
+                set_value();
+            }
+            catch (...)
+            {
+                set_exception(std::current_exception());
+            }
         }
+#pragma clang diagnostic pop
     }
     
     // async_assoc_state
@@ -711,20 +766,45 @@ namespace ps
     template<class T, class F>
     void async_assoc_state<T, F>::execute()
     {
-        try
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc++1z-extensions"
+        if constexpr(is_future<invoke_of_t<std::decay_t<F>>>::value)
         {
-            this->set_value(_func());
+            auto fut = _func();
+            fut._state->add_shared();
+            this->add_shared();
+            fut.then_error([this, state = fut._state](const std::exception_ptr& exception) mutable {
+                if (exception == nullptr)
+                {
+                    state->_status &= ~assoc_sub_state::future_attached;
+                    future<T> fut_arg(state);
+                    this->set_value(fut_arg.get());
+                }
+                else
+                {
+                    this->set_exception(exception);
+                }
+                state->release_shared();
+                this->release_shared();
+            });
         }
-        catch (...)
+        else
         {
-            this->set_exception(std::current_exception());
+            try
+            {
+                this->set_value(_func());
+            }
+            catch (...)
+            {
+                this->set_exception(std::current_exception());
+            }
         }
+#pragma clang diagnostic pop
     }
     
     template<class T, class F>
     void async_assoc_state<T, F>::on_zero_shared() noexcept
     {
-        this->wait();
         base::on_zero_shared();
     }
     
@@ -747,21 +827,44 @@ namespace ps
     template<class F>
     void async_assoc_state<void, F>::execute()
     {
-        try
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc++1z-extensions"
+        if constexpr(is_future<invoke_of_t<std::decay_t<F>>>::value)
         {
-            _func();
-            set_value();
+            auto fut = _func();
+            fut._state->add_shared();
+            this->add_shared();
+            fut.then_error([this, state = fut._state](const std::exception_ptr& exception) mutable {
+                if (exception == nullptr)
+                {
+                    this->set_value();
+                }
+                else
+                {
+                    this->set_exception(exception);
+                }
+                state->release_shared();
+                this->release_shared();
+            });
         }
-        catch (...)
+        else
         {
-            set_exception(std::current_exception());
+            try
+            {
+                _func();
+                set_value();
+            }
+            catch (...)
+            {
+                set_exception(std::current_exception());
+            }
         }
+#pragma clang diagnostic pop
     }
     
     template<class F>
     void async_assoc_state<void, F>::on_zero_shared() noexcept
     {
-        wait();
         base::on_zero_shared();
     }
     
@@ -885,6 +988,10 @@ namespace ps
         template<class R>
         friend std::conditional_t<is_reference_wrapper<std::decay_t<R>>::value, future<std::decay_t<R>&>, future<std::decay_t<R>>> make_ready_future(R&& value);
         friend assoc_sub_state;
+        template<class, class>
+        friend class async_assoc_state;
+        template<class, class>
+        friend class deferred_assoc_state;
         
         void then_error(cxx_function::unique_function<void(const std::exception_ptr&)>&& continuation);
         
@@ -1019,6 +1126,10 @@ namespace ps
         template<class R>
         friend std::conditional_t<is_reference_wrapper<std::decay_t<R>>::value, future<std::decay_t<R>&>, future<std::decay_t<R>>> make_ready_future(R&& value);
         friend assoc_sub_state;
+        template<class, class>
+        friend class async_assoc_state;
+        template<class, class>
+        friend class deferred_assoc_state;
         
         void then_error(cxx_function::unique_function<void(const std::exception_ptr&)>&& continuation);
         
@@ -1152,6 +1263,10 @@ namespace ps
         friend void __attribute__((__visibility__("hidden"))) when_any_inner_helper(Context* context);
         friend future<void> make_ready_future();
         friend assoc_sub_state;
+        template<class, class>
+        friend class async_assoc_state;
+        template<class, class>
+        friend class deferred_assoc_state;
         
         void then_error(cxx_function::unique_function<void(const std::exception_ptr&)>&& continuation);
         
@@ -1240,6 +1355,7 @@ namespace ps
         
         template<class>
         friend class packaged_task;
+
     public:
         promise();
         template<class Alloc>
@@ -2105,6 +2221,7 @@ namespace ps
     future<T> make_deferred_assoc_state(F&& f)
     {
         std::unique_ptr<deferred_assoc_state<T, F>, release_shared_count> h(new deferred_assoc_state<T, F>(std::forward<F>(f)));
+        h->execute();
         return future<T>(h.get());
     }
     
@@ -2146,7 +2263,7 @@ namespace ps
     template<class F, class... Args>
     using future_async_t = std::conditional_t<is_future<future_async_ret_t<F, Args...>>::value, future_async_ret_t<F, Args...>, future<future_async_ret_t<F, Args...>>>;
     
-    template<class R, class F, class... Args>
+    template<class F, class... Args>
     class async_func
     {
         std::tuple<F, Args...> _f;
@@ -2168,26 +2285,16 @@ namespace ps
         ~async_func() = default;
         
         
-        R operator()()
+        future_async_ret_t<F, Args...> operator()()
         {
             using Index = typename make_tuple_indices<1+sizeof...(Args), 1>::type;
             return execute(Index());
         }
     private:
         template<std::size_t ...Indices>
-        R execute(tuple_indices<Indices...> /*unused*/)
+        future_async_ret_t<F, Args...> execute(tuple_indices<Indices...> /*unused*/)
         {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wc++1z-extensions"
-            if constexpr(is_future<future_async_ret_t<F, Args...>>::value)
-            {
-                return ps::invoke(std::move(std::get<0>(_f)), std::move(std::get<Indices>(_f))...).get();
-            }
-            else
-            {
-                return ps::invoke(std::move(std::get<0>(_f)), std::move(std::get<Indices>(_f))...);
-            }
-#pragma clang diagnostic pop
+            return ps::invoke(std::move(std::get<0>(_f)), std::move(std::get<Indices>(_f))...);
         }
     };
     
@@ -2200,7 +2307,7 @@ namespace ps
     future_async_t<F, Args...> async(ps::launch policy, F&& f, Args&&... args)
     {
         using R = typename future_held<future_async_ret_t<F, Args...>>::type;
-        using BF = async_func<R, std::decay_t<F>, std::decay_t<Args>...>;
+        using BF = async_func<std::decay_t<F>, std::decay_t<Args>...>;
         
         if (does_policy_contain(policy, launch::queued))
         {
@@ -2371,6 +2478,7 @@ namespace ps
             std::size_t processed = 0;
             std::size_t failled = 0;
             future_inner_type result;
+            std::vector<assoc_sub_state*> result_sub_state;
             promise<future_inner_type> p;
             bool ready = false;
             bool result_moved = false;
@@ -2382,9 +2490,11 @@ namespace ps
         auto result_future = shared_context->p.get_future();
         shared_context->total_futures = std::distance(first, last);
         shared_context->result.sequence.reserve(shared_context->total_futures);
+        shared_context->result_sub_state.reserve(shared_context->total_futures);
         
         for (size_t index = 0; first != last; ++first, ++index)
         {
+            first->_state->add_shared();
             shared_context->result.sequence.push_back(std::move(*first));
             shared_context->result.sequence[index].then_error([shared_context, index](const std::exception_ptr exception) {
                 std::lock_guard<std::mutex> lock(shared_context->mutex);
@@ -2422,6 +2532,10 @@ namespace ps
                 
                 if (shared_context->processed == shared_context->total_futures && shared_context->ready_futures == shared_context->total_futures)
                 {
+                    for(auto& it : shared_context->result_sub_state)
+                    {
+                        it->release_shared();
+                    }
                     delete shared_context;
                 }
             });
@@ -2443,6 +2557,10 @@ namespace ps
                 }
                 if (shared_context->ready_futures == shared_context->total_futures)
                 {
+                    for(auto& it : shared_context->result_sub_state)
+                    {
+                        it->release_shared();
+                    }
                     delete shared_context;
                 }
             }
@@ -2454,6 +2572,8 @@ namespace ps
     template<size_t I, typename Context>
     void __attribute__((__visibility__("hidden"))) when_any_inner_helper(Context* context)
     {
+        std::get<I>(context->result.sequence)._state->add_shared();
+        context->result_sub_state.emplace_back(static_cast<assoc_sub_state*>(std::get<I>(context->result.sequence)._state));
         std::get<I>(context->result.sequence).then_error([context](const std::exception_ptr exception) {
             std::lock_guard<std::mutex> lock(context->mutex);
             ++context->ready_futures;
@@ -2490,6 +2610,10 @@ namespace ps
             }
             if (context->processed == context->total_futures && context->ready_futures == context->total_futures)
             {
+                for(auto& it : context->result_sub_state)
+                {
+                    it->release_shared();
+                }
                 delete context;
             }
         });
@@ -2541,6 +2665,7 @@ namespace ps
             std::atomic<std::size_t> processed {0};
             std::size_t failled = 0;
             future_inner_type result;
+            std::vector<assoc_sub_state*> result_sub_state;
             promise<future_inner_type> p;
             bool ready = false;
             bool result_moved = false;
@@ -2551,6 +2676,7 @@ namespace ps
         auto shared_context = new context_any;
         auto ret = shared_context->p.get_future();
         shared_context->total_futures = sizeof...(futures);
+        shared_context->result_sub_state.reserve(shared_context->total_futures);
         
         fill_result_helper<0>(shared_context, std::forward<Futures>(futures)...);
         when_any_helper_struct<0, sizeof...(futures)>::apply(shared_context, shared_context->result.sequence);
@@ -2570,6 +2696,10 @@ namespace ps
             }
             if (shared_context->ready_futures == shared_context->total_futures)
             {
+                for(auto& it : shared_context->result_sub_state)
+                {
+                    it->release_shared();
+                }
                 delete shared_context;
             }
         }
