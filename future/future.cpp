@@ -381,6 +381,7 @@ namespace ps
     void async_queued::post(assoc_sub_state* state)
     {
         std::lock_guard<std::mutex> lock(_mutex);
+        state->add_shared();
         _tasks.push(state);
         _cond.notify_all();
     }
@@ -418,6 +419,7 @@ namespace ps
                     lock.unlock();
                     state->execute();
                     lock.lock();
+                    state->release_shared();
                 }
             }
         });
@@ -445,6 +447,7 @@ namespace ps
                 lock.unlock();
                 _task->execute();
                 lock.lock();
+                _task->release_shared();
                 _task = nullptr;
                 _has_task = false;
                 ps::invoke(_completion_cb);
@@ -545,6 +548,7 @@ namespace ps
         {
             std::unique_lock<std::mutex> lock(_mutex);
             _task_queue.push(task);
+            task->add_shared();
         }
         _cond.notify_one();
     }
