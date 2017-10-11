@@ -200,7 +200,7 @@ namespace ps
         
         void on_zero_shared() noexcept override;
         void sub_wait(std::unique_lock<std::mutex>& lk);
-
+        
         template<class, class>
         friend class async_assoc_state;
         template<class, class>
@@ -899,7 +899,7 @@ namespace ps
         bool _has_task {false};
         std::condition_variable _start_cond;
         assoc_sub_state* _task {nullptr};
-        cxx_function::function<void()> _completion_cb {nullptr};
+        cxx_function::unique_function<void()> _completion_cb {nullptr};
     public:
         async_thread_worker();
         ~async_thread_worker();
@@ -911,10 +911,10 @@ namespace ps
             return !_has_task;
         }
         
-        void post(assoc_sub_state* task, const cxx_function::function<void()>& completion_cb);
+        void post(assoc_sub_state* task, cxx_function::unique_function<void()>&& completion_cb);
         
     private:
-        void start_task(assoc_sub_state* task, const cxx_function::function<void()>& completion_cb);
+        void start_task(assoc_sub_state* task, cxx_function::unique_function<void()>&& completion_cb);
     };
     
     class async_thread_pool
@@ -1355,7 +1355,7 @@ namespace ps
         
         template<class>
         friend class packaged_task;
-
+        
     public:
         promise();
         template<class Alloc>
@@ -3085,4 +3085,3 @@ namespace std
 } // namespace std
 
 #endif // FUTURE_FUTURE_HPP
-

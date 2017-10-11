@@ -359,32 +359,32 @@ namespace ps
     {
         return _state->then_error(std::move(continuation));
     }
-
+    
     // async_queued
-
+    
     async_queued& get_async_queued()
     {
         static async_queued queue;
         return queue;
     }
-
+    
     async_queued::async_queued() : _stop(false)
     {
         start();
     }
-
+    
     async_queued::~async_queued()
     {
         stop();
     }
-
+    
     void async_queued::post(assoc_sub_state* state)
     {
         std::lock_guard<std::mutex> lock(_mutex);
         _tasks.push(state);
         _cond.notify_all();
     }
-
+    
     void async_queued::stop()
     {
         {
@@ -397,7 +397,7 @@ namespace ps
             _thread.join();
         }
     }
-
+    
     void async_queued::start()
     {
         _thread = ps::thread([this] {
@@ -422,15 +422,15 @@ namespace ps
             }
         });
     }
-
+    
     // async_thread_pool
-
+    
     async_thread_pool& get_async_thread_pool()
     {
         static async_thread_pool queue;
         return queue;
     }
-
+    
     async_thread_worker::async_thread_worker()
     {
         _thread = ps::thread([this] {
@@ -451,12 +451,12 @@ namespace ps
             }
         });
     }
-
+    
     async_thread_worker::~async_thread_worker()
     {
         stop();
     }
-
+    
     void async_thread_worker::stop()
     {
         {
@@ -469,25 +469,25 @@ namespace ps
             _thread.join();
         }
     }
-
-    void async_thread_worker::post(assoc_sub_state* task, const cxx_function::function<void()>& completion_cb)
+    
+    void async_thread_worker::post(assoc_sub_state* task, cxx_function::unique_function<void()>&& completion_cb)
     {
         std::unique_lock<std::mutex> lock(_m);
         if (_task != nullptr)
         {
             throw std::logic_error("Worker already has a pending task");
         }
-        start_task(task, completion_cb);
+        start_task(task, std::move(completion_cb));
     }
-
-    void async_thread_worker::start_task(assoc_sub_state* task, const cxx_function::function<void()>& completion_cb)
+    
+    void async_thread_worker::start_task(assoc_sub_state* task, cxx_function::unique_function<void()>&& completion_cb)
     {
         _has_task = true;
         _task = task;
-        _completion_cb = completion_cb;
+        _completion_cb = std::move(completion_cb);
         _start_cond.notify_one();
     }
-
+    
     async_thread_pool::async_thread_pool() : _tp(ps::thread::hardware_concurrency())
     , _available_count(ps::thread::hardware_concurrency())
     {
@@ -522,7 +522,7 @@ namespace ps
             }
         });
     }
-
+    
     async_thread_pool::~async_thread_pool()
     {
         {
@@ -539,7 +539,7 @@ namespace ps
             worker.stop();
         }
     }
-
+    
     void async_thread_pool::post(assoc_sub_state* task)
     {
         {
@@ -548,5 +548,5 @@ namespace ps
         }
         _cond.notify_one();
     }
-
+    
 } // namespace ps

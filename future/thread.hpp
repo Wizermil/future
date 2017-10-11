@@ -125,13 +125,13 @@ namespace ps
     
     class thread;
     class thread_id;
-
+    
 #ifdef __ANDROID__
 #define PS_PTHREAD_T_NULL 0
 #else
 #define PS_PTHREAD_T_NULL nullptr
 #endif
-
+    
     
     namespace this_thread
     {
