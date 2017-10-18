@@ -192,7 +192,7 @@ namespace ps
     unsigned thread::hardware_concurrency() noexcept
     {
 #ifdef __ANDROID__
-        return sysconf(_SC_NPROCESSORS_ONLN);
+        return sysconf(_SC_NPROCESSORS_CONF);
 #else
         unsigned n;
         int mib[2] = {CTL_HW, HW_NCPU};
