@@ -269,7 +269,7 @@ namespace ps
         TSPtr tsp(new thread_struct);
         using G = std::tuple<TSPtr, typename std::decay_t<F>, typename std::decay_t<Args>...>;
         std::unique_ptr<G> p(new G(std::move(tsp), decay_copy(std::forward<F>(f)), decay_copy(std::forward<Args>(args))...));
-        int ec = pthread_create(&_t, NULL, &thread_proxy<G>, p.get());
+        int ec = pthread_create(&_t, nullptr, &thread_proxy<G>, p.get());
         if (ec == 0)
         {
             p.release();

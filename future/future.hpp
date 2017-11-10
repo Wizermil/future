@@ -218,7 +218,7 @@ namespace ps
         };
         
         inline assoc_sub_state() = default;
-        virtual ~assoc_sub_state() = default;
+        virtual ~assoc_sub_state() override = default;
         
         inline bool has_value() const
         {
@@ -2372,7 +2372,7 @@ namespace ps
         for (; first != last; ++first, ++index)
         {
             shared_context->result.push_back(std::move(*first));
-            shared_context->result[index].then_error([shared_context, index](const std::exception_ptr exception) {
+            shared_context->result[index].then_error([shared_context](const std::exception_ptr exception) {
                 std::lock_guard<std::mutex> lock(shared_context->mutex);
                 ++shared_context->ready_futures;
                 if (exception != nullptr)

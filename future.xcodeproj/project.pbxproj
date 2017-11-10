@@ -632,6 +632,7 @@
 					"-Wno-padded",
 					"-Wno-documentation-unknown-command",
 					"-Wno-documentation",
+					"-Wno-auto-import",
 					"-Wno-over-aligned",
 				);
 			};
@@ -703,6 +704,7 @@
 					"-Wno-padded",
 					"-Wno-documentation-unknown-command",
 					"-Wno-documentation",
+					"-Wno-auto-import",
 					"-Wno-over-aligned",
 				);
 			};
