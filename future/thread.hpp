@@ -126,10 +126,10 @@ namespace ps
     class thread;
     class thread_id;
     
-#ifdef __ANDROID__
-#define PS_PTHREAD_T_NULL 0
-#else
+#ifdef __APPLE__
 #define PS_PTHREAD_T_NULL nullptr
+#else
+#define PS_PTHREAD_T_NULL 0
 #endif
     
     

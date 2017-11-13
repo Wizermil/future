@@ -193,6 +193,8 @@ namespace ps
     {
 #ifdef __ANDROID__
         return sysconf(_SC_NPROCESSORS_ONLN);
+#elif EMSCRIPTEN
+		return 1;
 #else
         unsigned n;
         int mib[2] = {CTL_HW, HW_NCPU};
