@@ -896,7 +896,7 @@ namespace ps
         ps::thread _thread;
         mutable std::mutex _m;
         bool _stop {false};
-        bool _has_task {false};
+        std::atomic<bool> _has_task {false};
         std::condition_variable _start_cond;
         assoc_sub_state* _task {nullptr};
         cxx_function::unique_function<void()> _completion_cb {nullptr};
@@ -926,7 +926,7 @@ namespace ps
         std::queue<assoc_sub_state*> _task_queue;
         ps::thread _manager_thread;
         bool _stop {false};
-        std::size_t _available_count;
+        std::atomic<std::size_t> _available_count;
         std::condition_variable _cond;
         
     public:
