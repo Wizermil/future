@@ -193,7 +193,7 @@ namespace ps
     {
 #ifdef __ANDROID__
         return sysconf(_SC_NPROCESSORS_ONLN);
-#elifdef EMSCRIPTEN
+#elif defined(EMSCRIPTEN)
 		return 1;
 #else
         unsigned n;
