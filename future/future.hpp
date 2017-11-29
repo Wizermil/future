@@ -218,7 +218,7 @@ namespace ps
         };
         
         inline assoc_sub_state() = default;
-        virtual ~assoc_sub_state() = default;
+        virtual ~assoc_sub_state() override = default;
         
         inline bool has_value() const
         {
@@ -896,7 +896,7 @@ namespace ps
         ps::thread _thread;
         mutable std::mutex _m;
         bool _stop {false};
-        bool _has_task {false};
+        std::atomic<bool> _has_task {false};
         std::condition_variable _start_cond;
         assoc_sub_state* _task {nullptr};
         cxx_function::unique_function<void()> _completion_cb {nullptr};
@@ -926,7 +926,7 @@ namespace ps
         std::queue<assoc_sub_state*> _task_queue;
         ps::thread _manager_thread;
         bool _stop {false};
-        std::size_t _available_count;
+        std::atomic<std::size_t> _available_count;
         std::condition_variable _cond;
         
     public:
@@ -2372,7 +2372,7 @@ namespace ps
         for (; first != last; ++first, ++index)
         {
             shared_context->result.push_back(std::move(*first));
-            shared_context->result[index].then_error([shared_context, index](const std::exception_ptr exception) {
+            shared_context->result[index].then_error([shared_context](const std::exception_ptr exception) {
                 std::lock_guard<std::mutex> lock(shared_context->mutex);
                 ++shared_context->ready_futures;
                 if (exception != nullptr)
