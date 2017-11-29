@@ -758,6 +758,7 @@ namespace ps
     public:
         inline explicit async_assoc_state(F&& f) : _func(std::forward<F>(f))
         {
+            this->add_shared();
         }
         
         void execute() override;
@@ -800,6 +801,7 @@ namespace ps
             }
         }
 #pragma clang diagnostic pop
+        this->release_shared();
     }
     
     template<class T, class F>
@@ -819,6 +821,7 @@ namespace ps
     public:
         inline explicit async_assoc_state(F&& f) : _func(std::forward<F>(f))
         {
+            this->add_shared();
         }
         
         void execute() override;
@@ -860,6 +863,7 @@ namespace ps
             }
         }
 #pragma clang diagnostic pop
+        this->release_shared();
     }
     
     template<class F>
@@ -2229,6 +2233,7 @@ namespace ps
     future<T> make_async_assoc_state(F&& f)
     {
         std::unique_ptr<async_assoc_state<T, F>, release_shared_count> h(new async_assoc_state<T, F>(std::forward<F>(f)));
+
         ps::thread(&async_assoc_state<T, F>::execute, h.get()).detach();
         return future<T>(h.get());
     }

@@ -1493,6 +1493,57 @@
     XCTAssertGreaterThan(res, 8ms);
     XCTAssertLessThan(res, 8ms+dur_epsilon);
     XCTAssertNotEqual(tid80, tid81);
+
+    int b = 0;
+    {
+        ps::async(ps::launch::async, [&b](int a) {
+            ps::this_thread::sleep_for(1ms);
+            b = a;
+            return a;
+        }, 42);
+    }
+    ps::this_thread::sleep_for(2ms);
+    XCTAssertEqual(b, 42);
+
+    b = 0;
+    {
+        ps::async(ps::launch::async, [&b](int a) {
+            ps::this_thread::sleep_for(1ms);
+            throw std::logic_error("logic_error");
+            return a;
+        }, 42);
+    }
+    ps::this_thread::sleep_for(2ms);
+    XCTAssertEqual(b, 0);
+
+    b = 0;
+    {
+        ps::async(ps::launch::async, [&b](int a) {
+            ps::this_thread::sleep_for(1ms);
+            return ps::async(ps::launch::async, [&b](int a) {
+                ps::this_thread::sleep_for(1ms);
+                throw std::logic_error("logic_error");
+                return a;
+            }, a);
+        }, 42);
+    }
+    ps::this_thread::sleep_for(3ms);
+    XCTAssertEqual(b, 0);
+
+    b = 0;
+    std::exception_ptr e = nullptr;
+    auto fut9 = ps::async(ps::launch::async, [&b](int a) {
+        ps::this_thread::sleep_for(1ms);
+        throw std::logic_error("logic_error9");
+        return a;
+    }, 42);
+    try {
+        fut9.get();
+    } catch(...) {
+        e = std::current_exception();
+    }
+    XCTAssertEqual(b, 0);
+    XCTAssertNotEqual(e, nullptr);
 }
 
 - (void)testAsyncVoid {
@@ -1568,6 +1619,53 @@
     XCTAssertFalse(fut6.is_ready());
     fut6.get();
     XCTAssertEqual(i, 42);
+
+    int b = 0;
+    {
+        ps::async(ps::launch::async, [&b](int a) {
+            ps::this_thread::sleep_for(1ms);
+            b = a;
+        }, 42);
+    }
+    ps::this_thread::sleep_for(2ms);
+    XCTAssertEqual(b, 42);
+
+    b = 0;
+    {
+        ps::async(ps::launch::async, [&b](int a) {
+            ps::this_thread::sleep_for(1ms);
+            throw std::logic_error("logic_error");
+        }, 42);
+    }
+    ps::this_thread::sleep_for(2ms);
+    XCTAssertEqual(b, 0);
+
+    b = 0;
+    {
+        ps::async(ps::launch::async, [&b](int a) {
+            ps::this_thread::sleep_for(1ms);
+            return ps::async(ps::launch::async, [&b](int a) {
+                ps::this_thread::sleep_for(1ms);
+                throw std::logic_error("logic_error");
+            }, a);
+        }, 42);
+    }
+    ps::this_thread::sleep_for(3ms);
+    XCTAssertEqual(b, 0);
+
+    b = 0;
+    std::exception_ptr e = nullptr;
+    auto fut7 = ps::async(ps::launch::async, [&b](int a) {
+        ps::this_thread::sleep_for(1ms);
+        throw std::logic_error("logic_error7");
+    }, 42);
+    try {
+        fut7.get();
+    } catch(...) {
+        e = std::current_exception();
+    }
+    XCTAssertEqual(b, 0);
+    XCTAssertNotEqual(e, nullptr);
 }
 
 - (void)testWhenAllT {
