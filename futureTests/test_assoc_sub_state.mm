@@ -151,7 +151,9 @@
     XCTAssertEqual(a.use_count(), 1);
     
     ps::assoc_sub_state* b = new ps::assoc_sub_state();
-    b->release_shared();
+    XCTAssertEqual(b->use_count(), 1);
+    bool res = b->release_shared();
+    XCTAssertEqual(res, true);
 }
 
 - (void)testThen {

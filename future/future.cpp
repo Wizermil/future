@@ -277,9 +277,9 @@ namespace ps
     
     future<void> make_ready_future()
     {
-        auto state = new assoc_sub_state();
+        std::unique_ptr<assoc_sub_state, release_shared_count> state{new assoc_sub_state()};
         state->set_value();
-        return future<void>(state);
+        return future<void>(state.get());
     }
     
     // promise<void>
