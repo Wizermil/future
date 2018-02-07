@@ -2378,23 +2378,30 @@ namespace ps
         {
             shared_context->result.push_back(std::move(*first));
             shared_context->result[index].then_error([shared_context](const std::exception_ptr exception) {
-                std::lock_guard<std::mutex> lock(shared_context->mutex);
-                ++shared_context->ready_futures;
-                if (exception != nullptr)
+                bool delete_shared_context = false;
                 {
-                    shared_context->e = exception;
+                    std::lock_guard<std::mutex> lock(shared_context->mutex);
+                    ++shared_context->ready_futures;
+                    if (exception != nullptr)
+                    {
+                        shared_context->e = exception;
+                    }
+
+                    if (shared_context->ready_futures == shared_context->total_futures)
+                    {
+                        if (shared_context->e != nullptr)
+                        {
+                            shared_context->p.set_exception(shared_context->e);
+                        }
+                        else
+                        {
+                            shared_context->p.set_value(std::move(shared_context->result));
+                        }
+                        delete_shared_context = true;
+                    }
                 }
-                
-                if (shared_context->ready_futures == shared_context->total_futures)
+                if (delete_shared_context)
                 {
-                    if (shared_context->e != nullptr)
-                    {
-                        shared_context->p.set_exception(shared_context->e);
-                    }
-                    else
-                    {
-                        shared_context->p.set_value(std::move(shared_context->result));
-                    }
                     delete shared_context;
                 }
             });
@@ -2408,22 +2415,30 @@ namespace ps
     {
         std::get<I>(context->result) = std::forward<Future>(f);
         std::get<I>(context->result).then_error([context](const std::exception_ptr exception) {
-            std::lock_guard<std::mutex> lock(context->mutex);
-            ++context->ready_futures;
-            if (exception != nullptr)
+            bool delete_context = false;
             {
-                context->e = exception;
+                std::lock_guard<std::mutex> lock(context->mutex);
+                ++context->ready_futures;
+                if (exception != nullptr)
+                {
+                    context->e = exception;
+                }
+                if (context->ready_futures == context->total_futures)
+                {
+                    if (context->e != nullptr)
+                    {
+                        context->p.set_exception(context->e);
+                    }
+                    else
+                    {
+                        context->p.set_value(std::move(context->result));
+                    }
+                    delete_context = true;
+                }
             }
-            if (context->ready_futures == context->total_futures)
+
+            if (delete_context)
             {
-                if (context->e != nullptr)
-                {
-                    context->p.set_exception(context->e);
-                }
-                else
-                {
-                    context->p.set_value(std::move(context->result));
-                }
                 delete context;
             }
         });
@@ -2502,51 +2517,59 @@ namespace ps
             first->_state->add_shared();
             shared_context->result.sequence.push_back(std::move(*first));
             shared_context->result.sequence[index].then_error([shared_context, index](const std::exception_ptr exception) {
-                std::lock_guard<std::mutex> lock(shared_context->mutex);
-                ++shared_context->ready_futures;
-                if (exception != nullptr)
+                bool delete_shared_context = false;
                 {
-                    ++shared_context->failled;
-                    shared_context->e = exception;
-                }
-                if (!shared_context->ready)
-                {
-                    if (exception == nullptr)
+                    std::lock_guard<std::mutex> lock(shared_context->mutex);
+                    ++shared_context->ready_futures;
+                    if (exception != nullptr)
                     {
-                        shared_context->result.index = index;
-                        shared_context->ready = true;
+                        ++shared_context->failled;
+                        shared_context->e = exception;
                     }
-                    else
+                    if (!shared_context->ready)
                     {
-                        shared_context->result.index = index;
-                    }
-                    
-                    if (shared_context->processed == shared_context->total_futures && !shared_context->result_moved && (exception == nullptr || shared_context->failled == shared_context->total_futures))
-                    {
-                        shared_context->result_moved = true;
-                        if (shared_context->failled == shared_context->total_futures)
+                        if (exception == nullptr)
                         {
-                            shared_context->p.set_exception(shared_context->e);
+                            shared_context->result.index = index;
+                            shared_context->ready = true;
                         }
                         else
                         {
-                            shared_context->p.set_value(std::move(shared_context->result));
+                            shared_context->result.index = index;
+                        }
+
+                        if (shared_context->processed == shared_context->total_futures && !shared_context->result_moved && (exception == nullptr || shared_context->failled == shared_context->total_futures))
+                        {
+                            shared_context->result_moved = true;
+                            if (shared_context->failled == shared_context->total_futures)
+                            {
+                                shared_context->p.set_exception(shared_context->e);
+                            }
+                            else
+                            {
+                                shared_context->p.set_value(std::move(shared_context->result));
+                            }
                         }
                     }
-                }
-                
-                if (shared_context->processed == shared_context->total_futures && shared_context->ready_futures == shared_context->total_futures)
-                {
-                    for(auto& it : shared_context->result_sub_state)
+
+                    if (shared_context->processed == shared_context->total_futures && shared_context->ready_futures == shared_context->total_futures)
                     {
-                        it->release_shared();
+                        for(auto& it : shared_context->result_sub_state)
+                        {
+                            it->release_shared();
+                        }
+                        delete_shared_context = true;
                     }
+                }
+                if (delete_shared_context)
+                {
                     delete shared_context;
                 }
             });
             ++shared_context->processed;
         }
-        
+
+        bool delete_shared_context = false;
         {
             std::lock_guard<std::mutex> lock(shared_context->mutex);
             if ((shared_context->ready || shared_context->failled == shared_context->total_futures) && !shared_context->result_moved)
@@ -2566,9 +2589,13 @@ namespace ps
                     {
                         it->release_shared();
                     }
-                    delete shared_context;
+                    delete_shared_context = true;
                 }
             }
+        }
+        if (delete_shared_context)
+        {
+            delete shared_context;
         }
         
         return result_future;
@@ -2580,45 +2607,52 @@ namespace ps
         std::get<I>(context->result.sequence)._state->add_shared();
         context->result_sub_state.emplace_back(static_cast<assoc_sub_state*>(std::get<I>(context->result.sequence)._state));
         std::get<I>(context->result.sequence).then_error([context](const std::exception_ptr exception) {
-            std::lock_guard<std::mutex> lock(context->mutex);
-            ++context->ready_futures;
-            if (exception != nullptr)
+            bool delete_context = false;
             {
-                ++context->failled;
-                context->e = exception;
-            }
-            
-            if (!context->ready)
-            {
-                if (exception == nullptr)
+                std::lock_guard<std::mutex> lock(context->mutex);
+                ++context->ready_futures;
+                if (exception != nullptr)
                 {
-                    context->ready = true;
-                    context->result.index = I;
+                    ++context->failled;
+                    context->e = exception;
                 }
-                else
+
+                if (!context->ready)
                 {
-                    context->result.index = I;
-                }
-                
-                if (context->processed == context->total_futures && !context->result_moved && (exception == nullptr || context->failled == context->total_futures))
-                {
-                    context->result_moved = true;
-                    if (context->failled == context->total_futures)
+                    if (exception == nullptr)
                     {
-                        context->p.set_exception(context->e);
+                        context->ready = true;
+                        context->result.index = I;
                     }
                     else
                     {
-                        context->p.set_value(std::move(context->result));
+                        context->result.index = I;
+                    }
+
+                    if (context->processed == context->total_futures && !context->result_moved && (exception == nullptr || context->failled == context->total_futures))
+                    {
+                        context->result_moved = true;
+                        if (context->failled == context->total_futures)
+                        {
+                            context->p.set_exception(context->e);
+                        }
+                        else
+                        {
+                            context->p.set_value(std::move(context->result));
+                        }
                     }
                 }
-            }
-            if (context->processed == context->total_futures && context->ready_futures == context->total_futures)
-            {
-                for(auto& it : context->result_sub_state)
+                if (context->processed == context->total_futures && context->ready_futures == context->total_futures)
                 {
-                    it->release_shared();
+                    for(auto& it : context->result_sub_state)
+                    {
+                        it->release_shared();
+                    }
+                    delete_context = true;
                 }
+            }
+            if (delete_context)
+            {
                 delete context;
             }
         });
@@ -2686,25 +2720,32 @@ namespace ps
         fill_result_helper<0>(shared_context, std::forward<Futures>(futures)...);
         when_any_helper_struct<0, sizeof...(futures)>::apply(shared_context, shared_context->result.sequence);
         {
-            std::lock_guard<std::mutex> lock(shared_context->mutex);
-            if ((shared_context->ready || shared_context->failled == shared_context->total_futures) && !shared_context->result_moved)
+            bool delete_shared_context = false;
             {
-                shared_context->result_moved = true;
-                if (shared_context->failled == shared_context->total_futures)
+                std::lock_guard<std::mutex> lock(shared_context->mutex);
+                if ((shared_context->ready || shared_context->failled == shared_context->total_futures) && !shared_context->result_moved)
                 {
-                    shared_context->p.set_exception(shared_context->e);
+                    shared_context->result_moved = true;
+                    if (shared_context->failled == shared_context->total_futures)
+                    {
+                        shared_context->p.set_exception(shared_context->e);
+                    }
+                    else
+                    {
+                        shared_context->p.set_value(std::move(shared_context->result));
+                    }
                 }
-                else
+                if (shared_context->ready_futures == shared_context->total_futures)
                 {
-                    shared_context->p.set_value(std::move(shared_context->result));
+                    for(auto& it : shared_context->result_sub_state)
+                    {
+                        it->release_shared();
+                    }
+                    delete_shared_context = true;
                 }
             }
-            if (shared_context->ready_futures == shared_context->total_futures)
+            if (delete_shared_context)
             {
-                for(auto& it : shared_context->result_sub_state)
-                {
-                    it->release_shared();
-                }
                 delete shared_context;
             }
         }
