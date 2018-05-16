@@ -405,6 +405,9 @@ namespace ps
             std::unique_lock<std::mutex> lock(_mutex);
             while (!_stop)
             {
+#ifdef __APPLE__
+                @autoreleasepool {
+#endif
                 _cond.wait(lock, [this]() {
                     return _stop || !_tasks.empty();
                 });
@@ -421,6 +424,9 @@ namespace ps
                     lock.lock();
                     state->release_shared();
                 }
+#ifdef __APPLE__
+                }
+#endif
             }
         });
     }
@@ -439,6 +445,9 @@ namespace ps
             std::unique_lock<std::mutex> lock(_m);
             while (!_stop)
             {
+#ifdef __APPLE__
+                @autoreleasepool {
+#endif
                 _start_cond.wait(lock, [this] {
                     return _task != nullptr || _stop;
                 });
@@ -451,6 +460,9 @@ namespace ps
                 _task = nullptr;
                 _has_task = false;
                 ps::invoke(_completion_cb);
+#ifdef __APPLE__
+                }
+#endif
             }
         });
     }
@@ -498,6 +510,9 @@ namespace ps
             std::unique_lock<std::mutex> lock(_mutex);
             while (!_stop)
             {
+#ifdef __APPLE__
+                @autoreleasepool {
+#endif
                 _cond.wait(lock, [this] {
                     return _stop || (!_task_queue.empty() && _available_count > 0);
                 });
@@ -522,6 +537,9 @@ namespace ps
                         _cond.notify_one();
                     });
                 }
+#ifdef __APPLE__
+                }
+#endif
             }
         });
     }

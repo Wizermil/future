@@ -102,7 +102,7 @@
 		2251AA281F4F0C7F00423F6C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		2251AA2D1F4F0C7F00423F6C /* futureTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = futureTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2251AA341F4F0C7F00423F6C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		2251AA3E1F4F0C9200423F6C /* future.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = future.cpp; sourceTree = "<group>"; };
+		2251AA3E1F4F0C9200423F6C /* future.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; path = future.cpp; sourceTree = "<group>"; };
 		2251AA3F1F4F0C9200423F6C /* future.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = future.hpp; sourceTree = "<group>"; };
 		2280E4AC1F544073004E5D82 /* test_launch.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = test_launch.mm; sourceTree = "<group>"; };
 		2280E4AE1F54499B004E5D82 /* test_future.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = test_future.mm; sourceTree = "<group>"; };
