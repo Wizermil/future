@@ -46,7 +46,7 @@ FUTURE_EXTERN const unsigned char futureVersionString[];
 #include <future/debug.hpp>
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Weverything"
-#include <future/cxx_function.hpp>
+#include <future/function2.hpp>
 #pragma clang diagnostic pop
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wc++1z-extensions"

@@ -32,7 +32,7 @@
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Weverything"
-#include "cxx_function.hpp"
+#include "function2.hpp"
 #pragma clang diagnostic pop
 #include "memory.hpp"
 #include "thread.hpp"
@@ -196,7 +196,7 @@ namespace ps
         mutable std::mutex _mut;
         mutable std::condition_variable _cv;
         std::atomic<unsigned> _status {0};
-        cxx_function::unique_function<void(const std::exception_ptr&)> _continuation {nullptr};
+        fu2::unique_function<void(const std::exception_ptr&)> _continuation {nullptr};
         
         void on_zero_shared() noexcept override;
         void sub_wait(std::unique_lock<std::mutex>& lk);
@@ -263,7 +263,7 @@ namespace ps
         void set_exception(const std::exception_ptr& p);
         void set_exception_at_thread_exit(const std::exception_ptr& p);
         
-        void then_error(cxx_function::unique_function<void(const std::exception_ptr&)>&& continuation);
+        void then_error(fu2::unique_function<void(const std::exception_ptr&)>&& continuation);
         template<class T, class F, class Arg = future<T>>
         future_then_t<T, F, Arg> then(Arg&& future, F&& func);
         inline bool has_continuation() const
@@ -903,7 +903,7 @@ namespace ps
         std::atomic<bool> _has_task {false};
         std::condition_variable _start_cond;
         assoc_sub_state* _task {nullptr};
-        cxx_function::unique_function<void()> _completion_cb {nullptr};
+        fu2::unique_function<void()> _completion_cb {nullptr};
     public:
         async_thread_worker();
         ~async_thread_worker();
@@ -915,10 +915,10 @@ namespace ps
             return !_has_task;
         }
         
-        void post(assoc_sub_state* task, cxx_function::unique_function<void()>&& completion_cb);
+        void post(assoc_sub_state* task, fu2::unique_function<void()>&& completion_cb);
         
     private:
-        void start_task(assoc_sub_state* task, cxx_function::unique_function<void()>&& completion_cb);
+        void start_task(assoc_sub_state* task, fu2::unique_function<void()>&& completion_cb);
     };
     
     class async_thread_pool
@@ -997,7 +997,7 @@ namespace ps
         template<class, class>
         friend class deferred_assoc_state;
         
-        void then_error(cxx_function::unique_function<void(const std::exception_ptr&)>&& continuation);
+        void then_error(fu2::unique_function<void(const std::exception_ptr&)>&& continuation);
         
     public:
         inline future() noexcept = default;
@@ -1092,7 +1092,7 @@ namespace ps
     }
     
     template<class T>
-    void future<T>::then_error(cxx_function::unique_function<void(const std::exception_ptr&)>&& continuation)
+    void future<T>::then_error(fu2::unique_function<void(const std::exception_ptr&)>&& continuation)
     {
         return _state->then_error(std::move(continuation));
     }
@@ -1135,7 +1135,7 @@ namespace ps
         template<class, class>
         friend class deferred_assoc_state;
         
-        void then_error(cxx_function::unique_function<void(const std::exception_ptr&)>&& continuation);
+        void then_error(fu2::unique_function<void(const std::exception_ptr&)>&& continuation);
         
     public:
         inline future() noexcept = default;
@@ -1230,7 +1230,7 @@ namespace ps
     }
     
     template<class T>
-    void future<T&>::then_error(cxx_function::unique_function<void(const std::exception_ptr&)>&& continuation)
+    void future<T&>::then_error(fu2::unique_function<void(const std::exception_ptr&)>&& continuation)
     {
         return _state->then_error(std::move(continuation));
     }
@@ -1272,7 +1272,7 @@ namespace ps
         template<class, class>
         friend class deferred_assoc_state;
         
-        void then_error(cxx_function::unique_function<void(const std::exception_ptr&)>&& continuation);
+        void then_error(fu2::unique_function<void(const std::exception_ptr&)>&& continuation);
         
     public:
         inline future() noexcept = default;
@@ -2764,7 +2764,7 @@ namespace ps
         template<std::size_t I, typename Context, typename Future>
         friend void __attribute__((__visibility__("hidden"))) when_inner_helper(Context* context, Future&& f);
         
-        void then_error(cxx_function::unique_function<void(const std::exception_ptr&)>&& continuation);
+        void then_error(fu2::unique_function<void(const std::exception_ptr&)>&& continuation);
         
     public:
         inline shared_future() noexcept : _state(nullptr)
@@ -2869,7 +2869,7 @@ namespace ps
     }
     
     template<class T>
-    void shared_future<T>::then_error(cxx_function::unique_function<void(const std::exception_ptr&)>&& continuation)
+    void shared_future<T>::then_error(fu2::unique_function<void(const std::exception_ptr&)>&& continuation)
     {
         return _state->then_error(std::move(continuation));
     }
@@ -2893,7 +2893,7 @@ namespace ps
         template<std::size_t I, typename Context, typename Future>
         friend void __attribute__((__visibility__("hidden"))) when_inner_helper(Context* context, Future&& f);
         
-        void then_error(cxx_function::unique_function<void(const std::exception_ptr&)>&& continuation);
+        void then_error(fu2::unique_function<void(const std::exception_ptr&)>&& continuation);
         
     public:
         inline shared_future() noexcept : _state(nullptr)
@@ -3003,7 +3003,7 @@ namespace ps
     }
     
     template<class T>
-    void shared_future<T&>::then_error(cxx_function::unique_function<void(const std::exception_ptr&)>&& continuation)
+    void shared_future<T&>::then_error(fu2::unique_function<void(const std::exception_ptr&)>&& continuation)
     {
         return _state->then_error(std::move(continuation));
     }
@@ -3020,7 +3020,7 @@ namespace ps
         template<std::size_t I, typename Context, typename Future>
         friend void __attribute__((__visibility__("hidden"))) when_inner_helper(Context* context, Future&& f);
         
-        void then_error(cxx_function::unique_function<void(const std::exception_ptr&)>&& continuation);
+        void then_error(fu2::unique_function<void(const std::exception_ptr&)>&& continuation);
         
     public:
         inline shared_future() noexcept : _state(nullptr)

@@ -328,7 +328,7 @@
             i = f.get();
             ps::promise<std::string> prom;
             auto fut = prom.get_future();
-            auto t = ps::thread([i, p = std::move(prom)]() mutable {
+            auto t = ps::thread([p = std::move(prom)]() mutable {
                 ps::this_thread::sleep_for(5ms);
                 p.set_exception(std::make_exception_ptr(std::logic_error("logic_error9")));
             });
@@ -356,7 +356,7 @@
             i = f.get();
             ps::promise<std::string> prom;
             auto fut = prom.get_future();
-            auto t = ps::thread([i, p = std::move(prom)]() mutable {
+            auto t = ps::thread([p = std::move(prom)]() mutable {
                 ps::this_thread::sleep_for(5ms);
                 try {
                     p.set_exception(std::make_exception_ptr(std::logic_error("logic_error10-1")));
@@ -492,7 +492,7 @@
             i = f.get();
             ps::promise<std::string> prom;
             auto fut = prom.get_future();
-            auto t = ps::thread([i, p = std::move(prom)]() mutable {
+            auto t = ps::thread([p = std::move(prom)]() mutable {
                 p.set_exception_at_thread_exit(std::make_exception_ptr(std::logic_error("logic_error9")));
                 ps::this_thread::sleep_for(5ms);
             });
@@ -520,7 +520,7 @@
             i = f.get();
             ps::promise<std::string> prom;
             auto fut = prom.get_future();
-            auto t = ps::thread([i, p = std::move(prom)]() mutable {
+            auto t = ps::thread([p = std::move(prom)]() mutable {
                 try {
                     p.set_exception_at_thread_exit(std::make_exception_ptr(std::logic_error("logic_error10-1")));
                 } catch (...) {
@@ -897,7 +897,7 @@
             i = f.get();
             ps::promise<void> prom;
             auto fut = prom.get_future();
-            auto t = ps::thread([i, p = std::move(prom)]() mutable {
+            auto t = ps::thread([p = std::move(prom)]() mutable {
                 ps::this_thread::sleep_for(5ms);
                 p.set_exception(std::make_exception_ptr(std::logic_error("logic_error9")));
             });
@@ -925,7 +925,7 @@
             i = f.get();
             ps::promise<void> prom;
             auto fut = prom.get_future();
-            auto t = ps::thread([i, p = std::move(prom)]() mutable {
+            auto t = ps::thread([p = std::move(prom)]() mutable {
                 ps::this_thread::sleep_for(5ms);
                 try {
                     p.set_exception(std::make_exception_ptr(std::logic_error("logic_error10-1")));
@@ -1325,7 +1325,7 @@
             i = k;
             ps::promise<std::string> prom;
             auto fut = prom.get_future();
-            auto t = ps::thread([i, p = std::move(prom)]() mutable {
+            auto t = ps::thread([p = std::move(prom)]() mutable {
                 ps::this_thread::sleep_for(5ms);
                 p.set_exception(std::make_exception_ptr(std::logic_error("logic_error9")));
             });
@@ -1356,7 +1356,7 @@
             i = k;
             ps::promise<std::string> prom;
             auto fut = prom.get_future();
-            auto t = ps::thread([i, p = std::move(prom)]() mutable {
+            auto t = ps::thread([p = std::move(prom)]() mutable {
                 ps::this_thread::sleep_for(5ms);
                 try {
                     p.set_exception(std::make_exception_ptr(std::logic_error("logic_error10-1")));
@@ -1528,7 +1528,7 @@
         ps::this_thread::sleep_for(10ms);
         i = 4;
     }).share(),
-                             ps::async([&j]() {
+                             ps::async([]() {
         ps::this_thread::sleep_for(5ms);
         throw std::logic_error("logic_error3");
     }).share(),
@@ -1554,9 +1554,9 @@
         ps::this_thread::sleep_for(10ms);
         i = 4;
     }).share(),
-                             ps::async([&k]() {
+                             ps::async([]() {
         ps::this_thread::sleep_for(5ms);
-        return ps::async([&k]() {
+        return ps::async([]() {
             ps::this_thread::sleep_for(5ms);
             throw std::logic_error("logic_error4");
         });
@@ -1584,9 +1584,9 @@
         ps::this_thread::sleep_for(10ms);
         i = 4;
     }).share());
-    vec5.emplace_back(ps::async([&j]() {
+    vec5.emplace_back(ps::async([]() {
         ps::this_thread::sleep_for(5ms);
-        return ps::async([&j]() {
+        return ps::async([]() {
             ps::this_thread::sleep_for(5ms);
             throw std::logic_error("logic_error4");
         });
