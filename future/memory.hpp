@@ -30,8 +30,9 @@
 #ifndef FUTURE_MEMORY_HPP
 #define FUTURE_MEMORY_HPP
 
-#include "tuple.hpp"
-#include "type_traits.hpp"
+#include <future/tuple.hpp>
+#include <future/type_traits.hpp>
+
 #include <atomic>
 #include <cstddef>
 #include <memory>

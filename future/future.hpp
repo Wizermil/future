@@ -32,10 +32,11 @@
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Weverything"
-#include "function2.hpp"
+#include <future/function2.hpp>
 #pragma clang diagnostic pop
-#include "memory.hpp"
-#include "thread.hpp"
+#include <future/memory.hpp>
+#include <future/thread.hpp>
+
 #include <atomic>
 #include <chrono>
 #include <condition_variable>

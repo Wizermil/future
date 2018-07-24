@@ -30,9 +30,10 @@
 #ifndef FUTURE_THREAD_HPP
 #define FUTURE_THREAD_HPP
 
-#include "debug.hpp"
-#include "system_error.hpp"
-#include "tuple.hpp"
+#include <future/debug.hpp>
+#include <future/system_error.hpp>
+#include <future/tuple.hpp>
+
 #include <chrono>
 #include <condition_variable>
 #include <exception>
