@@ -15,6 +15,11 @@
 		2251AA351F4F0C7F00423F6C /* future.h in Headers */ = {isa = PBXBuildFile; fileRef = 2251AA271F4F0C7F00423F6C /* future.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		2251AA401F4F0C9200423F6C /* future.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2251AA3E1F4F0C9200423F6C /* future.cpp */; };
 		2251AA411F4F0C9200423F6C /* future.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 2251AA3F1F4F0C9200423F6C /* future.hpp */; settings = {ATTRIBUTES = (Public, ); }; };
+		226B4926211A0F800070009A /* debug.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 22FDFB631F50D89E00B60E42 /* debug.cpp */; };
+		226B4927211A0F800070009A /* future.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2251AA3E1F4F0C9200423F6C /* future.cpp */; };
+		226B4928211A0F800070009A /* memory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 22BC43141F501A330008AEC5 /* memory.cpp */; };
+		226B4929211A0F800070009A /* system_error.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 22BC43281F5055F50008AEC5 /* system_error.cpp */; };
+		226B492A211A0F800070009A /* thread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 22BC43201F502B6C0008AEC5 /* thread.cpp */; };
 		2280E4AD1F544073004E5D82 /* test_launch.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2280E4AC1F544073004E5D82 /* test_launch.mm */; };
 		2280E4AF1F54499B004E5D82 /* test_future.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2280E4AE1F54499B004E5D82 /* test_future.mm */; };
 		2280E4B11F546A02004E5D82 /* test_packaged_task_function.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2280E4B01F546A02004E5D82 /* test_packaged_task_function.mm */; };
@@ -70,6 +75,18 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		226B491B211A0F530070009A /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "include/$(PRODUCT_NAME)";
+			dstSubfolderSpec = 16;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		22224E181F51767200EC34BE /* tuple.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = tuple.hpp; sourceTree = "<group>"; };
 		22224E1C1F517A9900EC34BE /* type_traits.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = type_traits.hpp; sourceTree = "<group>"; };
@@ -82,6 +99,7 @@
 		2251AA341F4F0C7F00423F6C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		2251AA3E1F4F0C9200423F6C /* future.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; path = future.cpp; sourceTree = "<group>"; };
 		2251AA3F1F4F0C9200423F6C /* future.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = future.hpp; sourceTree = "<group>"; };
+		226B491D211A0F530070009A /* libfuture_ios.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libfuture_ios.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		2280E4AC1F544073004E5D82 /* test_launch.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = test_launch.mm; sourceTree = "<group>"; };
 		2280E4AE1F54499B004E5D82 /* test_future.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = test_future.mm; sourceTree = "<group>"; };
 		2280E4B01F546A02004E5D82 /* test_packaged_task_function.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = test_packaged_task_function.mm; sourceTree = "<group>"; };
@@ -113,6 +131,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				2251AA2E1F4F0C7F00423F6C /* future.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		226B491A211A0F530070009A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -150,6 +175,7 @@
 				2251AA2D1F4F0C7F00423F6C /* futureTests.xctest */,
 				22BB85061F7E8B2300CF95DE /* future.framework */,
 				22BB85201F7E8CE500CF95DE /* macfutureTests.xctest */,
+				226B491D211A0F530070009A /* libfuture_ios.a */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -265,6 +291,23 @@
 			productReference = 2251AA2D1F4F0C7F00423F6C /* futureTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		226B491C211A0F530070009A /* future_ios */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 226B4923211A0F540070009A /* Build configuration list for PBXNativeTarget "future_ios" */;
+			buildPhases = (
+				226B4919211A0F530070009A /* Sources */,
+				226B491A211A0F530070009A /* Frameworks */,
+				226B491B211A0F530070009A /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = future_ios;
+			productName = future_ios;
+			productReference = 226B491D211A0F530070009A /* libfuture_ios.a */;
+			productType = "com.apple.product-type.library.static";
+		};
 		22BB85051F7E8B2300CF95DE /* macfuture */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 22BB850D1F7E8B2300CF95DE /* Build configuration list for PBXNativeTarget "macfuture" */;
@@ -307,6 +350,7 @@
 		2251AA1B1F4F0C7F00423F6C /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
+				DefaultBuildSystemTypeForWorkspace = Latest;
 				LastUpgradeCheck = 0930;
 				ORGANIZATIONNAME = "Pretty Simple";
 				TargetAttributes = {
@@ -316,6 +360,10 @@
 					};
 					2251AA2C1F4F0C7F00423F6C = {
 						CreatedOnToolsVersion = 9.0;
+						ProvisioningStyle = Automatic;
+					};
+					226B491C211A0F530070009A = {
+						CreatedOnToolsVersion = 10.0;
 						ProvisioningStyle = Automatic;
 					};
 					22BB85051F7E8B2300CF95DE = {
@@ -344,6 +392,7 @@
 				2251AA2C1F4F0C7F00423F6C /* futureTests */,
 				22BB85051F7E8B2300CF95DE /* macfuture */,
 				22BB851F1F7E8CE500CF95DE /* macfutureTests */,
+				226B491C211A0F530070009A /* future_ios */,
 			);
 		};
 /* End PBXProject section */
@@ -403,6 +452,18 @@
 				2280E4B11F546A02004E5D82 /* test_packaged_task_function.mm in Sources */,
 				22BDF50E1F715E68002E9323 /* test_compressed_pair.mm in Sources */,
 				2280E4AF1F54499B004E5D82 /* test_future.mm in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		226B4919211A0F530070009A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				226B4926211A0F800070009A /* debug.cpp in Sources */,
+				226B4927211A0F800070009A /* future.cpp in Sources */,
+				226B4928211A0F800070009A /* memory.cpp in Sources */,
+				226B4929211A0F800070009A /* system_error.cpp in Sources */,
+				226B492A211A0F800070009A /* thread.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -693,6 +754,39 @@
 			};
 			name = Release;
 		};
+		226B4924211A0F540070009A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = MWLR2HTMFW;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		226B4925211A0F540070009A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = MWLR2HTMFW;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				MTL_FAST_MATH = YES;
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		22BB850B1F7E8B2300CF95DE /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -815,6 +909,15 @@
 			buildConfigurations = (
 				2251AA3C1F4F0C7F00423F6C /* Debug */,
 				2251AA3D1F4F0C7F00423F6C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		226B4923211A0F540070009A /* Build configuration list for PBXNativeTarget "future_ios" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				226B4924211A0F540070009A /* Debug */,
+				226B4925211A0F540070009A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
