@@ -324,8 +324,6 @@ namespace ps
             {
                 try
                 {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wc++1z-extensions"
                     if constexpr(std::is_void<R>::value && is_future<future_then_ret_t<T, F, Arg>>::value)
                     {
                         ps::invoke(std::forward<F>(f), std::forward<Arg>(fut)).then_error([prom_fut = std::move(p)](const std::exception_ptr& except) mutable {
@@ -366,7 +364,6 @@ namespace ps
                             t->release_shared();
                         });
                     }
-#pragma clang diagnostic pop
                 }
                 catch(...)
                 {
@@ -656,8 +653,6 @@ namespace ps
     template<class T, class F>
     void deferred_assoc_state<T, F>::execute()
     {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wc++1z-extensions"
         if constexpr(is_future<invoke_of_t<std::decay_t<F>>>::value)
         {
             auto fut = _func();
@@ -689,7 +684,6 @@ namespace ps
                 this->set_exception(std::current_exception());
             }
         }
-#pragma clang diagnostic pop
     }
     
     template<class F>
@@ -711,8 +705,6 @@ namespace ps
     template<class F>
     void deferred_assoc_state<void, F>::execute()
     {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wc++1z-extensions"
         if constexpr(is_future<invoke_of_t<std::decay_t<F>>>::value)
         {
             auto fut = _func();
@@ -743,7 +735,6 @@ namespace ps
                 set_exception(std::current_exception());
             }
         }
-#pragma clang diagnostic pop
     }
     
     // async_assoc_state
@@ -768,8 +759,6 @@ namespace ps
     template<class T, class F>
     void async_assoc_state<T, F>::execute()
     {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wc++1z-extensions"
         if constexpr(is_future<invoke_of_t<std::decay_t<F>>>::value)
         {
             auto fut = _func();
@@ -801,7 +790,6 @@ namespace ps
                 this->set_exception(std::current_exception());
             }
         }
-#pragma clang diagnostic pop
         this->release_shared();
     }
     
@@ -831,8 +819,6 @@ namespace ps
     template<class F>
     void async_assoc_state<void, F>::execute()
     {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wc++1z-extensions"
         if constexpr(is_future<invoke_of_t<std::decay_t<F>>>::value)
         {
             auto fut = _func();
@@ -863,7 +849,6 @@ namespace ps
                 set_exception(std::current_exception());
             }
         }
-#pragma clang diagnostic pop
         this->release_shared();
     }
     
@@ -1694,8 +1679,6 @@ namespace ps
     std::conditional_t<is_reference_wrapper<std::decay_t<T>>::value, future<std::decay_t<T>&>, future<std::decay_t<T>>> make_ready_future(T&& value)
     {
         using X = std::decay_t<T>;
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wc++1z-extensions"
         if constexpr(is_reference_wrapper<X>::value)
         {
             auto state = new assoc_state<X&>();
@@ -1708,7 +1691,6 @@ namespace ps
             state->set_value(std::forward<T>(value));
             return future<X>(state);
         }
-#pragma clang diagnostic pop
     }
     
     future<void> make_ready_future();
