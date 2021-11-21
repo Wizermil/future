@@ -221,9 +221,9 @@ namespace ps
     {
         if (!is_ready())
         {
-            if ((_status & static_cast<unsigned>(deferred)) == static_cast<unsigned>(deferred))
+            if ((_status & deferred) == deferred)
             {
-                _status &= ~static_cast<unsigned>(deferred);
+                _status &= static_cast<std::uint8_t>(~deferred);
                 lk.unlock();
                 execute();
             }

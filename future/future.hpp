@@ -56,7 +56,7 @@
 namespace ps
 {
     
-    enum struct future_errc
+    enum struct future_errc : std::uint8_t
     {
         future_already_retrieved = 1,
         promise_already_satisfied,
@@ -64,7 +64,7 @@ namespace ps
         broken_promise
     };
     
-    enum struct launch
+    enum struct launch : std::uint8_t
     {
         async = 1,
         deferred = 2,
@@ -73,39 +73,39 @@ namespace ps
         thread_pool = 8,
     };
     using launch_underlying_type = std::underlying_type<launch>::type;
-    inline constexpr launch operator&(launch x, launch y)
+    inline constexpr launch operator&(launch x, launch y) noexcept
     {
         return static_cast<launch>(static_cast<launch_underlying_type>(x) & static_cast<launch_underlying_type>(y));
     }
-    inline constexpr launch operator|(launch x, launch y)
+    inline constexpr launch operator|(launch x, launch y) noexcept
     {
         return static_cast<launch>(static_cast<launch_underlying_type>(x) | static_cast<launch_underlying_type>(y));
     }
-    inline constexpr launch operator^(launch x, launch y)
+    inline constexpr launch operator^(launch x, launch y) noexcept
     {
         return static_cast<launch>(static_cast<launch_underlying_type>(x) ^ static_cast<launch_underlying_type>(y));
     }
-    inline constexpr launch operator~(launch x)
+    inline constexpr launch operator~(launch x) noexcept
     {
         return static_cast<launch>(~static_cast<launch_underlying_type>(x) & 15);
     }
-    inline launch& operator&=(launch& x, launch y)
+    inline launch& operator&=(launch& x, launch y) noexcept
     {
         x = x & y;
         return x;
     }
-    inline launch& operator|=(launch& x, launch y)
+    inline launch& operator|=(launch& x, launch y) noexcept
     {
         x = x | y;
         return x;
     }
-    inline launch& operator^=(launch& x, launch y)
+    inline launch& operator^=(launch& x, launch y) noexcept
     {
         x = x ^ y;
         return x;
     }
     
-    enum struct future_status
+    enum struct future_status : std::uint8_t
     {
         ready,
         timeout,
@@ -196,7 +196,7 @@ namespace ps
         std::exception_ptr _exception { nullptr};
         mutable std::mutex _mut;
         mutable std::condition_variable _cv;
-        std::atomic<unsigned> _status {0};
+        std::atomic<std::uint8_t> _status {0};
         fu2::unique_function<void(const std::exception_ptr&)> _continuation {nullptr};
         
         void on_zero_shared() noexcept override;
@@ -207,7 +207,7 @@ namespace ps
         template<class, class>
         friend class deferred_assoc_state;
     public:
-        enum
+        enum : std::uint8_t
         {
             constructed = 1,
             future_attached = 2,
@@ -353,7 +353,7 @@ namespace ps
                         fut_then.then_error([prom_fut = std::move(p), t = fut_then._state](const std::exception_ptr& except) mutable {
                             if (except == nullptr)
                             {
-                                t->_status &= ~future_attached;
+                                t->_status &= static_cast<std::uint8_t>(~future_attached);
                                 future_then_ret_t<T, F, Arg> fut_arg(t);
                                 prom_fut.set_value(fut_arg.get());
                             }
@@ -661,7 +661,7 @@ namespace ps
             fut.then_error([this, state = fut._state](const std::exception_ptr& exception) mutable {
                 if (exception == nullptr)
                 {
-                    state->_status &= ~assoc_sub_state::future_attached;
+                    state->_status &= static_cast<std::uint8_t>(~assoc_sub_state::future_attached);
                     future<T> fut_arg(state);
                     this->set_value(fut_arg.get());
                 }
@@ -767,7 +767,7 @@ namespace ps
             fut.then_error([this, state = fut._state](const std::exception_ptr& exception) mutable {
                 if (exception == nullptr)
                 {
-                    state->_status &= ~assoc_sub_state::future_attached;
+                    state->_status &= static_cast<std::uint8_t>(~assoc_sub_state::future_attached);
                     future<T> fut_arg(state);
                     this->set_value(fut_arg.get());
                 }
@@ -2353,7 +2353,7 @@ namespace ps
         
         auto shared_context = new context_all;
         auto result_future = shared_context->p.get_future();
-        shared_context->total_futures = std::distance(first, last);
+        shared_context->total_futures = static_cast<std::size_t>(std::distance(first, last));
         shared_context->result.reserve(shared_context->total_futures);
         size_t index = 0;
         
@@ -2491,7 +2491,7 @@ namespace ps
         
         auto shared_context = new context_any;
         auto result_future = shared_context->p.get_future();
-        shared_context->total_futures = std::distance(first, last);
+        shared_context->total_futures = static_cast<std::size_t>(std::distance(first, last));
         shared_context->result.sequence.reserve(shared_context->total_futures);
         shared_context->result_sub_state.reserve(shared_context->total_futures);
         

@@ -955,7 +955,7 @@
         p.set_value();
     });
     int i = 0, j = 0;
-    f1.then([&i](auto f) {
+    f1.then([&i](auto) {
         i = 7;
         return 6+i;
     }).then([&j](auto f) {
@@ -971,7 +971,7 @@
     ps::promise<void> p2;
     auto f2 = p2.get_future().share();
     p2.set_value();
-    f2.then([&i](auto f) {
+    f2.then([&i](auto) {
         i = 7;
         return 6+i;
     }).then([&j](auto f) {
@@ -987,7 +987,7 @@
     auto f5 = p5.get_future().share();
     p5.set_value();
     try {
-        f5.then([&i](auto f) {
+        f5.then([&i](auto) {
             i = 7;
             throw std::logic_error("logic_error5");
             return 6+i;
@@ -1011,7 +1011,7 @@
         p.set_value();
     });
     try {
-        f6.then([&i](auto f) {
+        f6.then([&i](auto) {
             i = 7;
             throw std::logic_error("logic_error6");
             return 6+i;
@@ -1034,7 +1034,7 @@
     auto f7 = p7.get_future().share();
     p7.set_value();
     try {
-        f7.then([&i](auto f) {
+        f7.then([&i](auto) {
             i = 7;
             return 6+i;
         }).then([&j](auto f) {

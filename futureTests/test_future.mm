@@ -955,7 +955,7 @@
         p.set_value();
     });
     int i = 0, j = 0;
-    f1.then([&i](auto f) {
+    f1.then([&i](auto) {
         i = 7;
         return 6+i;
     }).then([&j](auto f) {
@@ -971,7 +971,7 @@
     ps::promise<void> p2;
     auto f2 = p2.get_future();
     p2.set_value();
-    f2.then([&i](auto f) {
+    f2.then([&i](auto) {
         i = 7;
         return 6+i;
     }).then([&j](auto f) {
@@ -987,7 +987,7 @@
     auto f5 = p5.get_future();
     p5.set_value();
     try {
-        f5.then([&i](auto f) {
+        f5.then([&i](auto) {
             i = 7;
             throw std::logic_error("logic_error5");
             return 6+i;
@@ -1011,7 +1011,7 @@
         p.set_value();
     });
     try {
-        f6.then([&i](auto f) {
+        f6.then([&i](auto) {
             i = 7;
             throw std::logic_error("logic_error6");
             return 6+i;
@@ -1034,7 +1034,7 @@
     auto f7 = p7.get_future();
     p7.set_value();
     try {
-        f7.then([&i](auto f) {
+        f7.then([&i](auto) {
             i = 7;
             return 6+i;
         }).then([&j](auto f) {
@@ -1420,7 +1420,7 @@
     XCTAssertEqual(fut4.get(), 54.f + 42.f + 7.f);
     
     int i = 0, j = 0, k = 0;
-    auto fut5 = ps::async(ps::launch::async, [&i, &j, &k](const std::string& arg1, int arg2, float arg3) {
+    auto fut5 = ps::async(ps::launch::async, [&i, &j, &k](const std::string& arg1, int, float) {
         ps::this_thread::sleep_for(5ms);
         i = 1;
         return ps::async(ps::launch::deferred, [&j, &k](const std::string& arg11) {
@@ -1438,7 +1438,7 @@
     XCTAssertEqual(j, 2);
     XCTAssertEqual(k, 3);
     
-    auto fut6 = ps::async([](const std::string& arg1, int arg2, float arg3) {
+    auto fut6 = ps::async([](const std::string& arg1, int, float) {
         ps::this_thread::sleep_for(5ms);
         return ps::async(ps::launch::async, [](const std::string& arg11) {
             ps::this_thread::sleep_for(10ms);
@@ -1577,7 +1577,7 @@
     XCTAssertEqual(i, 42);
     
     i = 0;
-    auto fut4 = ps::async([&i](const std::string& arg1, int arg2, float arg3) {
+    auto fut4 = ps::async([&i](const std::string&, int arg2, float) {
         ps::this_thread::sleep_for(5ms);
         i  = arg2;
     }, "54", 42, 7.f);
@@ -1587,7 +1587,7 @@
     
     i = 0;
     int j = 0, k = 0, l =0;
-    auto fut5 = ps::async(ps::launch::async, [&i, &j, &k, &l](const std::string& arg1, int arg2, float arg3) {
+    auto fut5 = ps::async(ps::launch::async, [&i, &j, &k, &l](const std::string& arg1, int, float) {
         ps::this_thread::sleep_for(5ms);
         j = 1;
         return ps::async(ps::launch::deferred, [&i, &k, &l](const std::string& arg11) {
@@ -1607,9 +1607,9 @@
     XCTAssertEqual(l, 3);
     
     i = 0;
-    auto fut6 = ps::async([&i](const std::string& arg1, int arg2, float arg3) {
+    auto fut6 = ps::async([&i](const std::string& arg1, int, float) {
         ps::this_thread::sleep_for(5ms);
-        return ps::async(ps::launch::async, [&i](const std::string& arg11) {
+        return ps::async(ps::launch::async, [&i](const std::string&) {
             ps::this_thread::sleep_for(10ms);
             return ps::async(ps::launch::deferred, [&i]() {
                 i = 42;
@@ -1632,7 +1632,7 @@
 
     b = 0;
     {
-        ps::async(ps::launch::async, [](int a) {
+        ps::async(ps::launch::async, [](int) {
             ps::this_thread::sleep_for(1ms);
             throw std::logic_error("logic_error");
         }, 42);
@@ -1644,7 +1644,7 @@
     {
         ps::async(ps::launch::async, [](int a) {
             ps::this_thread::sleep_for(1ms);
-            return ps::async(ps::launch::async, [](int a) {
+            return ps::async(ps::launch::async, [](int) {
                 ps::this_thread::sleep_for(1ms);
                 throw std::logic_error("logic_error");
             }, a);
@@ -1655,7 +1655,7 @@
 
     b = 0;
     std::exception_ptr e = nullptr;
-    auto fut7 = ps::async(ps::launch::async, [](int a) {
+    auto fut7 = ps::async(ps::launch::async, [](int) {
         ps::this_thread::sleep_for(1ms);
         throw std::logic_error("logic_error7");
     }, 42);
@@ -1925,7 +1925,7 @@
     }));
     auto fut1 = ps::when_any(vec1.begin(), vec1.end());
     auto ret1 = fut1.get();
-    XCTAssertEqual(ret1.index, 1);
+    XCTAssertEqual(ret1.index, static_cast<std::size_t>(1));
     XCTAssertEqual(ret1.sequence[ret1.index].get(), 2);
     
     std::vector<ps::future<int>> vec2;
@@ -1934,7 +1934,7 @@
     vec2.emplace_back(ps::make_ready_future(2));
     auto fut2 = ps::when_any(vec2.begin(), vec2.end());
     auto ret2 = fut2.get();
-    XCTAssertEqual(ret2.index, 0);
+    XCTAssertEqual(ret2.index, static_cast<std::size_t>(0));
     XCTAssertEqual(ret2.sequence[ret2.index].get(), 4);
     
     auto fut3 = ps::when_any(ps::async([]() {
@@ -1950,14 +1950,14 @@
         return 8.8f;
     }));
     auto ret3 = fut3.get();
-    XCTAssertEqual(ret3.index, 2);
+    XCTAssertEqual(ret3.index, static_cast<std::size_t>(2));
     XCTAssertEqualWithAccuracy(std::get<2>(ret3.sequence).get(), 8.8f, std::numeric_limits<float>::epsilon());
     
     auto fut4 = ps::when_any(ps::make_ready_future(4)
                              , ps::make_ready_future("2")
                              , ps::make_ready_future(8.8f));
     auto ret4 = fut4.get();
-    XCTAssertEqual(ret4.index, 0);
+    XCTAssertEqual(ret4.index, static_cast<std::size_t>(0));
     XCTAssertEqual(std::get<0>(ret4.sequence).get(), 4);
     
     auto fut5 = ps::when_any(ps::async([]() {
@@ -1974,7 +1974,7 @@
         return 8;
     }));
     auto ret5 = fut5.get();
-    XCTAssertEqual(ret5.index, 2);
+    XCTAssertEqual(ret5.index, static_cast<std::size_t>(2));
     XCTAssertEqual(std::get<2>(ret5.sequence).get(), 8);
     
     std::vector<ps::future<int>> vec6;
@@ -1990,7 +1990,7 @@
     }));
     auto fut6 = ps::when_any(vec6.begin(), vec6.end());
     auto ret6 = fut6.get();
-    XCTAssertEqual(ret6.index, 2);
+    XCTAssertEqual(ret6.index, static_cast<std::size_t>(2));
     XCTAssertEqual(ret6.sequence[ret6.index].get(), 2);
     
     std::exception_ptr e = nullptr;
@@ -2067,7 +2067,7 @@
     auto res = (std::chrono::high_resolution_clock::now() - now);
     XCTAssertGreaterThan(res, 5ms);
     XCTAssertLessThan(res, 5ms+dur_epsilon);
-    XCTAssertEqual(ret1.index, 1);
+    XCTAssertEqual(ret1.index, static_cast<std::size_t>(1));
     XCTAssertEqual(j, 2);
     
     i = 0;
@@ -2090,7 +2090,7 @@
     res = (std::chrono::high_resolution_clock::now() - now);
     XCTAssertGreaterThan(res, 1ms);
     XCTAssertLessThan(res, 1ms+dur_epsilon);
-    XCTAssertEqual(ret2.index, 2);
+    XCTAssertEqual(ret2.index, static_cast<std::size_t>(2));
     XCTAssertEqualWithAccuracy(l, 8.8f, std::numeric_limits<float>::epsilon());
     
     i = 0;
@@ -2114,7 +2114,7 @@
     res = (std::chrono::high_resolution_clock::now() - now);
     XCTAssertGreaterThan(res, 1ms);
     XCTAssertLessThan(res, 1ms+dur_epsilon);
-    XCTAssertEqual(ret3.index, 2);
+    XCTAssertEqual(ret3.index, static_cast<std::size_t>(2));
     XCTAssertEqual(m, 8);
     
     i = 0;
@@ -2140,7 +2140,7 @@
     res = (std::chrono::high_resolution_clock::now() - now);
     XCTAssertGreaterThan(res, 1ms);
     XCTAssertLessThan(res, 1ms+dur_epsilon);
-    XCTAssertEqual(ret4.index, 2);
+    XCTAssertEqual(ret4.index, static_cast<std::size_t>(2));
     XCTAssertEqualWithAccuracy(l, 8.8f, std::numeric_limits<float>::epsilon());
     
     i = 0;
@@ -2164,7 +2164,7 @@
     res = (std::chrono::high_resolution_clock::now() - now);
     XCTAssertGreaterThan(res, 8ms);
     XCTAssertLessThan(res, 8ms+dur_epsilon);
-    XCTAssertEqual(ret5.index, 0);
+    XCTAssertEqual(ret5.index, static_cast<std::size_t>(0));
     XCTAssertEqual(i, 4);
 }
 
